@@ -9,7 +9,7 @@ java {
 	targetCompatibility = JavaVersion.VERSION_21
 }
 
-def archivesBaseName = project.archives_base_name
+
 version = "${project.mod_version}${getVersionMetadata()}+${project.minecraft_version}"
 group = project.maven_group
 
@@ -247,7 +247,7 @@ java {
 
 jar {
 	from("LICENSE") {
-		rename { "${it}_${project.archivesBaseName}"}
+		rename { "${it}_${project.archives_base_name}"}
 	}
 }
 
