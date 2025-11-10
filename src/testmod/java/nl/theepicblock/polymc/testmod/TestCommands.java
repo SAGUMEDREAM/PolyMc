@@ -9,27 +9,28 @@ import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.misc.logging.CommandSourceLogger;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
 import io.github.theepicblock.polymc.impl.resource.ClientJarResourcesImpl;
-import net.minecraft.block.BlockState;
-import net.minecraft.command.CommandRegistryAccess;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.state.property.Properties;
+import net.minecraft.commands.CommandBuildContext;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.literal;
+
 
 public class TestCommands {
-    public static void register(CommandDispatcher<ServerCommandSource> dispatcher, CommandRegistryAccess registryAccess, CommandManager.RegistrationEnvironment environment) {
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment) {
         dispatcher.register(literal("polymc-test")
                 .then(literal("find-states").executes(TestCommands::findState)));
     }
 
-    private static int findState(CommandContext<ServerCommandSource> ctx) {
+    private static int findState(CommandContext<CommandSourceStack> ctx) {
 
         SimpleLogger commandSource = new CommandSourceLogger(ctx.getSource(), true);
         try {
@@ -37,14 +38,14 @@ public class TestCommands {
             ClientJarResources clientJar = new ClientJarResourcesImpl(commandSource);
 
             var statesPerVariant = new HashMap<JBlockStateVariant,List<BlockState>>();
-            for (var block : Registries.BLOCK) {
-                var id = Registries.BLOCK.getId(block);
+            for (var block : BuiltInRegistries.BLOCK) {
+                var id = BuiltInRegistries.BLOCK.getKey(block);
                 var blockStateDefinitions = clientJar.getBlockState(id.getNamespace(), id.getPath());
 
                 if (blockStateDefinitions == null) continue;
 
-                for (var state : block.getStateManager().getStates()) {
-                    if (state.contains(Properties.WATERLOGGED) && state.get(Properties.WATERLOGGED)) {
+                for (var state : block.getStateDefinition().getPossibleStates()) {
+                    if (state.hasProperty(BlockStateProperties.WATERLOGGED) && state.getValue(BlockStateProperties.WATERLOGGED)) {
                         continue;
                     }
                     var stateDef = blockStateDefinitions.getVariantsBestMatching(state);
@@ -62,7 +63,7 @@ public class TestCommands {
                 if (states.size() > 1) {
                     commandSource.info("### "+states.size());
                     states.stream().limit(10).forEach(state -> {
-                        commandSource.info(state.getBlock().getTranslationKey() + " : " + Util.getPropertiesFromBlockState(state));
+                        commandSource.info(state.getBlock().getDescriptionId() + " : " + Util.getPropertiesFromBlockState(state));
                     });
                 }
             }

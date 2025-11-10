@@ -2,19 +2,6 @@ package nl.theepicblock.polymc.testmod.automated;
 
 import io.github.theepicblock.polymc.api.item.ItemLocation;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
-import net.minecraft.block.Blocks;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.PotionContentsComponent;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
-import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
-import net.minecraft.registry.Registries;
-import net.minecraft.test.TestContext;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.BlockPos;
 import nl.theepicblock.polymc.testmod.Testmod;
 import nl.theepicblock.polymc.testmod.YellowStatusEffect;
 

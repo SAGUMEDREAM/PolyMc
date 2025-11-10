@@ -1,34 +1,33 @@
 package nl.theepicblock.polymc.testmod;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.IntProperty;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.BlockHitResult;
 
 public class TestSlabBlock extends SlabBlock {
-    public static final IntProperty VARIANT = IntProperty.of("variant", 0, 20);
+    public static final IntegerProperty VARIANT = IntegerProperty.create("variant", 0, 20);
 
-    public TestSlabBlock(Settings settings) {
+    public TestSlabBlock(Properties settings) {
         super(settings);
-        this.setDefaultState(this.getDefaultState().with(VARIANT, 0));
+        this.registerDefaultState(this.defaultBlockState().setValue(VARIANT, 0));
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block,BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(VARIANT);
-        super.appendProperties(builder);
+        super.createBlockStateDefinition(builder);
     }
 
     @Override
-    protected ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        Testmod.debugSend(player, "Slab: "+state.get(VARIANT));
-        return super.onUse(state, world, pos, player, hit);
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
+        Testmod.debugSend(player, "Slab: "+state.getValue(VARIANT));
+        return super.useWithoutItem(state, world, pos, player, hit);
     }
 }

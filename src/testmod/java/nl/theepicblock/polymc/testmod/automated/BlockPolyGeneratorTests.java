@@ -1,18 +1,22 @@
 package nl.theepicblock.polymc.testmod.automated;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
-import net.minecraft.block.*;
-import net.minecraft.state.property.Properties;
-import net.minecraft.test.TestContext;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import nl.theepicblock.polymc.testmod.Testmod;
 
 import java.util.function.BiPredicate;
 
 public class BlockPolyGeneratorTests {
     @GameTest()
-    public void testDoor(TestContext ctx) {
+    public void testDoor(GameTestHelper ctx) {
         assertPoly(
                 ctx,
                 Testmod.TEST_DOOR,
@@ -25,15 +29,15 @@ public class BlockPolyGeneratorTests {
                 (sState, cState) -> cState.getBlock() == Blocks.IRON_DOOR,
                 "as of 1.20.1, doors that can't be opened by hand (such as Testmod.TEST_IRON_DOOR), should only be polied with minecraft:iron_door"
         );
-        ctx.complete();
+        ctx.succeed();
     }
 
     @GameTest()
-    public void testTrapDoor(TestContext ctx) {
+    public void testTrapDoor(GameTestHelper ctx) {
         assertPoly(
                 ctx,
                 Testmod.TEST_TRAP_DOOR,
-                (sState, cState) -> (cState.getBlock() instanceof TrapdoorBlock && opensAfterRightClick(ctx, cState)),
+                (sState, cState) -> (cState.getBlock() instanceof TrapDoorBlock && opensAfterRightClick(ctx, cState)),
                 "should be a trap door that's openable"
         );
         assertPoly(
@@ -42,33 +46,33 @@ public class BlockPolyGeneratorTests {
                 (sState, cState) -> cState.getBlock() == Blocks.IRON_TRAPDOOR,
                 "as of 1.20.1, doors that can't be opened by hand (such as Testmod.TEST_IRON_DOOR), should only be polied with minecraft:iron_trapdoor"
         );
-        ctx.complete();
+        ctx.succeed();
     }
 
     @GameTest()
-    public void testSlab(TestContext ctx) {
+    public void testSlab(GameTestHelper ctx) {
         assertPoly(
                 ctx,
                 Testmod.TEST_SLAB,
                 (sState, cState) -> (sState.getCollisionShape(null, null).equals(cState.getCollisionShape(null, null))),
                 "slab should have matching collisions"
         );
-        ctx.complete();
+        ctx.succeed();
     }
 
-    public static void assertPoly(TestContext ctx, Block a, BiPredicate<BlockState, BlockState> check, String message) {
+    public static void assertPoly(GameTestHelper ctx, Block a, BiPredicate<BlockState, BlockState> check, String message) {
         var poly = TestUtil.getMap().getBlockPoly(a);
-        a.getStateManager().getStates().forEach(serverState -> {
+        a.getStateDefinition().getPossibleStates().forEach(serverState -> {
             var polied = poly.getClientBlock(serverState);
-            ctx.assertTrue(check.test(serverState, polied), Text.literal(serverState+" didn't get polied correctly: "+message+ " but found "+polied+" instead"));
+            ctx.assertTrue(check.test(serverState, polied), Component.literal(serverState+" didn't get polied correctly: "+message+ " but found "+polied+" instead"));
         });
     }
 
-    public static boolean opensAfterRightClick(TestContext ctx, BlockState a) {
-        var startOpenedState = a.get(Properties.OPEN);
-        ctx.setBlockState(new BlockPos(1,1,1), a);
+    public static boolean opensAfterRightClick(GameTestHelper ctx, BlockState a) {
+        var startOpenedState = a.getValue(BlockStateProperties.OPEN);
+        ctx.setBlock(new BlockPos(1,1,1), a);
         ctx.useBlock(new BlockPos(1,1,1));
-        var endOpenedState = ctx.getBlockState(new BlockPos(1,1,1)).get(Properties.OPEN);
+        var endOpenedState = ctx.getBlockState(new BlockPos(1,1,1)).getValue(BlockStateProperties.OPEN);
         return startOpenedState != endOpenedState;
     }
 }

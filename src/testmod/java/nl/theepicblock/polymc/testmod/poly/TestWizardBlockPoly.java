@@ -5,17 +5,17 @@ import io.github.theepicblock.polymc.api.wizard.PacketConsumer;
 import io.github.theepicblock.polymc.api.wizard.VItem;
 import io.github.theepicblock.polymc.api.wizard.Wizard;
 import io.github.theepicblock.polymc.api.wizard.WizardInfo;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
-import net.minecraft.particle.ParticleTypes;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class TestWizardBlockPoly implements BlockPoly {
     @Override
     public BlockState getClientBlock(BlockState input) {
-        return Blocks.RED_STAINED_GLASS.getDefaultState();
+        return Blocks.RED_STAINED_GLASS.defaultBlockState();
     }
 
     @Override
@@ -44,7 +44,7 @@ public class TestWizardBlockPoly implements BlockPoly {
 
         @Override
         public void onTick(PacketConsumer players) {
-            players.sendPacket(new ParticleS2CPacket(ParticleTypes.WAX_ON,
+            players.sendPacket(new ClientboundLevelParticlesPacket(ParticleTypes.WAX_ON,
                     false,
                     false,
                     this.getPosition().x,

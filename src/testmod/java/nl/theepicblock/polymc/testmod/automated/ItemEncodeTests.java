@@ -3,14 +3,11 @@ package nl.theepicblock.polymc.testmod.automated;
 import io.github.theepicblock.polymc.impl.NOPPolyMap;
 import io.github.theepicblock.polymc.impl.PolyMapImpl;
 import io.github.theepicblock.polymc.mixins.wizards.ItemEntityAccessor;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.s2c.play.EntityTrackerUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import nl.theepicblock.polymc.testmod.Testmod;
 
 import java.util.ArrayList;
@@ -84,23 +81,23 @@ public class ItemEncodeTests {
     }
 */
     public ItemStack reencodeMethod(ItemStack stack, PacketTester ctx) {
-        return ctx.reencode(new ScreenHandlerSlotUpdateS2CPacket(0,0,0, stack)).getStack();
+        return ctx.reencode(new ClientboundContainerSetSlotPacket(0,0,0, stack)).getItem();
     }
 
     public ItemStack itemEntityMethod(ItemStack stack, PacketTester ctx) {
-        var coords = ctx.getTestContext().getAbsolute(new Vec3d(0,0,0));
-        var entity = new ItemEntity(ctx.getTestContext().getWorld(), coords.x, coords.y, coords.z, stack);
+        var coords = ctx.getTestContext().absoluteVec(new Vec3(0,0,0));
+        var entity = new ItemEntity(ctx.getTestContext().getLevel(), coords.x, coords.y, coords.z, stack);
 
         var trackerPackets = ctx.captureAll(() -> {
-            ctx.getTestContext().getWorld().spawnEntity(entity);
-            ctx.getTestContext().getWorld().tick(() -> false); // Tick the world so packets are sent
+            ctx.getTestContext().getLevel().addFreshEntity(entity);
+            ctx.getTestContext().getLevel().tick(() -> false); // Tick the world so packets are sent
         });
 
         var entry = trackerPackets.stream()
-                .filter(p -> p instanceof EntityTrackerUpdateS2CPacket)
-                .map(p -> (EntityTrackerUpdateS2CPacket)p)
+                .filter(p -> p instanceof ClientboundSetEntityDataPacket)
+                .map(p -> (ClientboundSetEntityDataPacket)p)
                 .filter(p -> p.id() == entity.getId())
-                .flatMap(p -> p.trackedValues().stream())
+                .flatMap(p -> p.packedItems().stream())
                 .filter(p -> p.id() == ItemEntityAccessor.getStackTracker().id())
                 .findAny();
 

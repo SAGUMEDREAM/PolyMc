@@ -2,7 +2,6 @@ package nl.theepicblock.polymc.testmod.automated;
 
 import io.github.theepicblock.polymc.PolyMc;
 import io.github.theepicblock.polymc.api.PolyMap;
-import net.minecraft.test.GameTestException;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 

@@ -1,14 +1,15 @@
 package nl.theepicblock.polymc.testmod;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.FlyingItemEntity;
-import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.world.World;
 
-public class TestFlyingWaxedWeatheredCutCopperStairs extends ThrownItemEntity implements FlyingItemEntity {
-    public TestFlyingWaxedWeatheredCutCopperStairs(EntityType<? extends ThrownItemEntity> entityType, World world) {
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.projectile.ItemSupplier;
+import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+
+public class TestFlyingWaxedWeatheredCutCopperStairs extends ThrowableItemProjectile implements ItemSupplier {
+    public TestFlyingWaxedWeatheredCutCopperStairs(EntityType<? extends ThrowableItemProjectile> entityType, Level world) {
         super(entityType, world);
     }
 

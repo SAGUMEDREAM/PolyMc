@@ -3,17 +3,17 @@ package nl.theepicblock.polymc.testmod.automated;
 import com.mojang.authlib.GameProfile;
 import io.github.theepicblock.polymc.api.PolyMap;
 import io.github.theepicblock.polymc.api.misc.PolyMapProvider;
-import net.minecraft.entity.Entity;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
-import net.minecraft.server.network.ChunkFilter;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.test.TestContext;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.level.ChunkTrackingView;
+import net.minecraft.server.level.ClientInformation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.Vec3;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -22,26 +22,30 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 public class PacketTester implements Closeable {
-    public final ServerPlayerEntity playerEntity;
+    public final ServerPlayer playerEntity;
     private final FakeNetworkHandler fakeNetworkHandler;
-    private final TestContext context;
+    private final GameTestHelper context;
 
-    public PacketTester(TestContext context) {
-        var world = context.getWorld();
+    @SuppressWarnings("DataFlowIssue")
+    public PacketTester(GameTestHelper context) {
+        var world = context.getLevel();
         // Mock a player entity
         var profile = new GameProfile(UUID.randomUUID(), "Fake packet receiver");
-        this.playerEntity = new ServerPlayerEntity(world.getServer(), world, profile, SyncedClientOptions.createDefault());
-        this.playerEntity.setChunkFilter(new ChunkFilter.Cylindrical(new ChunkPos(context.getAbsolutePos(BlockPos.ORIGIN)), 5));
+        this.playerEntity = new ServerPlayer(world.getServer(), world, profile, ClientInformation.createDefault());
+        this.playerEntity.setChunkTrackingView(ChunkTrackingView.of(new ChunkPos(context.absolutePos(BlockPos.ZERO)), 5));
         this.fakeNetworkHandler = new FakeNetworkHandler(world.getServer(), this.playerEntity);
+        this.playerEntity.connection = this.fakeNetworkHandler;
+        this.fakeNetworkHandler.player = this.playerEntity;
         this.context = context;
+        PolyMapProvider provider = (PolyMapProvider) this.fakeNetworkHandler;
 
         // Since the regular fabric events don't get called on this
         PolyMapProvider.get(fakeNetworkHandler).refreshUsedPolyMap();
 
-        world.onPlayerConnected(playerEntity);
-        world.getChunkManager().chunkLoadingManager.updatePosition(playerEntity);
-        this.playerEntity.setPosition(context.getAbsolute(Vec3d.ZERO));
-        world.getChunkManager().chunkLoadingManager.updatePosition(playerEntity);
+        world.addNewPlayer(playerEntity);
+        world.getChunkSource().chunkMap.move(playerEntity);
+        this.playerEntity.setPos(context.absoluteVec(Vec3.ZERO));
+        world.getChunkSource().chunkMap.move(playerEntity);
     }
 
     public <T extends Packet<?>> T reencode(T packet) {
@@ -52,8 +56,8 @@ public class PacketTester implements Closeable {
         PolyMapProvider.get(this.playerEntity).setPolyMap(map);
     }
 
-    public void setGameMode(GameMode v) {
-        this.playerEntity.interactionManager.changeGameMode(v);
+    public void setGameMode(GameType v) {
+        this.playerEntity.gameMode.changeGameModeForPlayer(v);
     }
 
     public void clearPackets() {
@@ -64,13 +68,13 @@ public class PacketTester implements Closeable {
      * Finds any packets of a certain type that have been sent recently. Will error if there isn't exactly one packet found.
      */
     public <T extends Packet<?>> T getFirstOfType(Class<T> packetType) {
-        this.context.assertTrue(!this.fakeNetworkHandler.sentPackets.isEmpty(),Text.literal(String.format("Expected one packet of type %s, but no packet of any type has been received", packetType)));
+        this.context.assertTrue(!this.fakeNetworkHandler.sentPackets.isEmpty(), Component.literal(String.format("Expected one packet of type %s, but no packet of any type has been received", packetType)));
         var packets = this.fakeNetworkHandler.sentPackets
                 .stream()
                 .filter(packet -> packet.getClass() == packetType)
                 .map(packet -> (T)packet)
                 .toList();
-        this.context.assertTrue(packets.size() == 1, Text.literal(String.format("Expected one packet of type %s, found %d", packetType, packets.size())));
+        this.context.assertTrue(packets.size() == 1, Component.literal(String.format("Expected one packet of type %s, found %d", packetType, packets.size())));
         return packets.get(0);
     }
 
@@ -101,7 +105,7 @@ public class PacketTester implements Closeable {
         //this.context.assertTrue(this.fakeNetworkHandler.sentPackets.contains(packet), message);
     }
 
-    public TestContext getTestContext() {
+    public GameTestHelper getTestContext() {
         return context;
     }
 

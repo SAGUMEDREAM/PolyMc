@@ -3,42 +3,40 @@ package nl.theepicblock.polymc.testmod.automated;
 import io.netty.channel.ChannelFutureListener;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.network.*;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.listener.PacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
-import net.minecraft.network.state.NetworkState;
-import net.minecraft.network.state.PlayStateFactories;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
+import net.minecraft.network.protocol.game.GameProtocols;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ChunkDataSender;
-import net.minecraft.server.network.ConnectedClientData;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.CommonListenerCookie;
+import net.minecraft.server.network.PlayerChunkSender;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import org.jetbrains.annotations.Nullable;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.util.ArrayList;
 
-public class FakeNetworkHandler extends ServerPlayNetworkHandler {
+public class FakeNetworkHandler extends ServerGamePacketListenerImpl {
     public ArrayList<Packet<?>> sentPackets = new ArrayList<>();
-    private final NetworkState<?> state;
+    private final ProtocolInfo<?> state;
 
-    public FakeNetworkHandler(MinecraftServer server, ServerPlayerEntity player) {
-        super(server, new FakeClientConnection(), player, ConnectedClientData.createDefault(player.getGameProfile(), false));
+    public FakeNetworkHandler(MinecraftServer server, ServerPlayer player) {
+        super(server, new FakeClientConnection(), player, CommonListenerCookie.createInitial(player.getGameProfile(), false));
         try {
-            var field = this.getClass().getField("chunkDataSender");
+            var field = this.getClass().getField("chunkSender");
             field.setAccessible(true);
             field.set(this, new FakeDataSender(true));
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
-        state = PlayStateFactories.S2C.bind(RegistryByteBuf.makeFactory(this.server.getRegistryManager()));
+        state = GameProtocols.CLIENTBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.server.registryAccess()));
     }
 
     @Override
     public void send(Packet<?> packet, @Nullable ChannelFutureListener channelFutureListener) {
-        if (packet instanceof BundleS2CPacket bundle) {
-            for (var packet2 : bundle.getPackets()) {
+        if (packet instanceof ClientboundBundlePacket bundle) {
+            for (var packet2 : bundle.subPackets()) {
                 this.send(packet2, channelFutureListener);
             }
             return;
@@ -49,7 +47,7 @@ public class FakeNetworkHandler extends ServerPlayNetworkHandler {
     }
 
     public <T extends Packet<?>> T reencode(T packet) {
-        if (packet instanceof BundleS2CPacket) {
+        if (packet instanceof ClientboundBundlePacket) {
             throw new IllegalArgumentException("Can't reencode bundles as of now");
         }
 
@@ -63,13 +61,13 @@ public class FakeNetworkHandler extends ServerPlayNetworkHandler {
         return (T)reconstructedPacket;
     }
 
-    private static final class FakeClientConnection extends ClientConnection {
+    private static final class FakeClientConnection extends Connection {
         private FakeClientConnection() {
-            super(NetworkSide.CLIENTBOUND);
+            super(PacketFlow.CLIENTBOUND);
         }
     }
 
-    private static final class FakeDataSender extends ChunkDataSender {
+    private static final class FakeDataSender extends PlayerChunkSender {
         public FakeDataSender(boolean local) {
             super(local);
         }

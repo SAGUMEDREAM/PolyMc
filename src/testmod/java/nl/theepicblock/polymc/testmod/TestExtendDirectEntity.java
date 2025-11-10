@@ -1,19 +1,19 @@
 package nl.theepicblock.polymc.testmod;
 
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.CreeperEntity;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.world.World;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.level.Level;
 
-public class TestExtendDirectEntity extends CreeperEntity {
-    public TestExtendDirectEntity(EntityType<? extends CreeperEntity> entityType, World world) {
+public class TestExtendDirectEntity extends Creeper {
+    public TestExtendDirectEntity(EntityType<? extends Creeper> entityType, Level world) {
         super(entityType, world);
     }
 
     @Override
     protected SoundEvent getHurtSound(DamageSource source) {
-        return SoundEvents.BLOCK_ANVIL_USE;
+        return SoundEvents.ANVIL_USE;
     }
 }

@@ -22,6 +22,7 @@ import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.vehicle.AbstractMinecart;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -45,6 +46,7 @@ public class EntityPolyGenerator {
         // Iterate over all vanilla entities to see if any are assignable
         var possible = new ArrayList<EntityType<?>>();
         for (var possibleType : BuiltInRegistries.ENTITY_TYPE) {
+            if (possibleType == null) continue;
             var id = BuiltInRegistries.ENTITY_TYPE.getKey(possibleType);
             if (Util.isVanilla(id)) {
                 Class<?> vanillaEntityClass = InternalEntityHelpers.getEntityClass(possibleType);
@@ -124,6 +126,7 @@ public class EntityPolyGenerator {
 
     /**
      * Generates the most suitable {@link EntityPoly} and directly adds it to the {@link PolyRegistry}
+     *
      * @see #generatePoly(EntityType, PolyRegistry)
      */
     public static <T extends Entity> void addEntityToBuilder(EntityType<T> entityType, PolyRegistry builder) {

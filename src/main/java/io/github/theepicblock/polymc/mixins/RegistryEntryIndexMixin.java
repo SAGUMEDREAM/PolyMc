@@ -12,7 +12,7 @@ public class RegistryEntryIndexMixin<T> implements RegistryEntryRegistry<T> {
     @SuppressWarnings("rawtypes")
     @Shadow
     @Final
-    private Registry field_40939;
+    Registry field_40939;
 
     @Override
     public Registry<T> polymc$getRegistry() {

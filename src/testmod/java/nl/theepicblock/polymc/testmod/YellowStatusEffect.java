@@ -1,9 +1,9 @@
 package nl.theepicblock.polymc.testmod;
 
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectCategory;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectCategory;
 
-public class YellowStatusEffect extends StatusEffect {
+public class YellowStatusEffect extends MobEffect {
     public static int YELLOW = 0xfff4e42c;
     /**
      * Helpful for automatic testing, to simulate the fact that
@@ -11,7 +11,7 @@ public class YellowStatusEffect extends StatusEffect {
      */
     public static boolean SIMULATE_UNAVAILABLE = false;
 
-    protected YellowStatusEffect(StatusEffectCategory category, int color) {
+    protected YellowStatusEffect(MobEffectCategory category, int color) {
         super(category, color);
     }
 
@@ -21,7 +21,7 @@ public class YellowStatusEffect extends StatusEffect {
     }
 
     @Override
-    public String getTranslationKey() {
-        return SIMULATE_UNAVAILABLE ? "translation.unavailable" : super.getTranslationKey();
+    public String getDescriptionId() {
+        return SIMULATE_UNAVAILABLE ? "translation.unavailable" : super.getDescriptionId();
     }
 }

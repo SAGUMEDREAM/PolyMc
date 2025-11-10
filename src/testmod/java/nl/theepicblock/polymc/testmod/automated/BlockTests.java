@@ -1,10 +1,9 @@
 package nl.theepicblock.polymc.testmod.automated;
 
 import io.github.theepicblock.polymc.impl.NOPPolyMap;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.world.level.block.state.BlockState;
 import nl.theepicblock.polymc.testmod.Testmod;
 
 import java.util.ArrayList;
@@ -62,19 +61,19 @@ public class BlockTests {
 */
     public void reencodeMethod(BlockState state, PacketTester ctx, Consumer<BlockState> newStateConsumer) {
         newStateConsumer.accept(
-                ctx.reencode(new BlockUpdateS2CPacket(new BlockPos(0,0,0), state)).getState()
+                ctx.reencode(new ClientboundBlockUpdatePacket(new BlockPos(0,0,0), state)).getBlockState()
         );
     }
 
     public void placeBlockMethod(BlockState state, PacketTester ctx, Consumer<BlockState> newStateConsumer) {
         // This test actually places a block and ensures the packet comes out right on the other end
         // Might be a bit flaky though…
-        ctx.getTestContext().waitAndRun(1, () -> {
+        ctx.getTestContext().runAfterDelay(1, () -> {
             ctx.clearPackets();
-            ctx.getTestContext().setBlockState(BlockPos.ORIGIN, state);
-            ctx.getTestContext().waitAndRun(1, () -> {
-                var packet = ctx.getFirstOfType(BlockUpdateS2CPacket.class);
-                newStateConsumer.accept(packet.getState());
+            ctx.getTestContext().setBlock(BlockPos.ZERO, state);
+            ctx.getTestContext().runAfterDelay(1, () -> {
+                var packet = ctx.getFirstOfType(ClientboundBlockUpdatePacket.class);
+                newStateConsumer.accept(packet.getBlockState());
             });
         });
     }
