@@ -30,18 +30,32 @@ import io.github.theepicblock.polymc.impl.poly.block.SimpleReplacementPoly;
 import io.github.theepicblock.polymc.impl.resource.ModdedResourceContainerImpl;
 import io.github.theepicblock.polymc.mixins.block.SlabBlockAccessor;
 import io.github.theepicblock.polymc.mixins.block.TrapdoorBlockAccessor;
-import net.minecraft.block.*;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.state.property.Properties;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.EntityBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.WallBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -65,7 +79,7 @@ public class BlockPolyGenerator {
         var moddedBlock = moddedState.getBlock();
         var fakeWorld = new FakedWorld(moddedState);
 
-        var blockId = Registries.BLOCK.getId(moddedBlock);
+        var blockId = BuiltInRegistries.BLOCK.getKey(moddedBlock);
         var blockStateDef = RESOURCES.getBlockState(blockId.getNamespace(), blockId.getPath());
 
         // This following line works because it gets the best matching variant from the definition itself
@@ -75,33 +89,33 @@ public class BlockPolyGenerator {
         //Get the state's collision shape.
         VoxelShape collisionShape;
         try {
-            collisionShape = moddedState.getCollisionShape(fakeWorld, BlockPos.ORIGIN);
+            collisionShape = moddedState.getCollisionShape(fakeWorld, BlockPos.ZERO);
         } catch (Exception e) {
             PolyMc.LOGGER.warn("Failed to get collision shape for " + moddedState.toString());
             e.printStackTrace();
-            collisionShape = VoxelShapes.UNBOUNDED;
+            collisionShape = Shapes.INFINITY;
         }
 
         //=== INVISIBLE BLOCKS ===
-        if (moddedState.getRenderType() == BlockRenderType.INVISIBLE) {
+        if (moddedState.getRenderShape() == RenderShape.INVISIBLE) {
             //This block is supposed to be invisible anyway
 
-            if (Block.isShapeFullCube(collisionShape)) {
+            if (Block.isShapeFullBlock(collisionShape)) {
                 isUniqueCallback.set(false);
-                return Blocks.BARRIER.getDefaultState();
+                return Blocks.BARRIER.defaultBlockState();
             }
 
             if (collisionShape.isEmpty()) {
                 //Try to get its selection shape so we can decide between a structure void (which has a selection box) and air (which doesn't)
                 try {
-                    VoxelShape outlineShape = moddedState.getOutlineShape(fakeWorld, BlockPos.ORIGIN);
+                    VoxelShape outlineShape = moddedState.getShape(fakeWorld, BlockPos.ZERO);
 
                     if (outlineShape.isEmpty()) {
                         isUniqueCallback.set(false);
-                        return Blocks.VOID_AIR.getDefaultState();
+                        return Blocks.VOID_AIR.defaultBlockState();
                     } else {
                         isUniqueCallback.set(false);
-                        return Blocks.STRUCTURE_VOID.getDefaultState();
+                        return Blocks.STRUCTURE_VOID.defaultBlockState();
                     }
                 } catch (Exception e) {
                     PolyMc.LOGGER.warn("Failed to get outline shape for " + moddedState);
@@ -112,22 +126,22 @@ public class BlockPolyGenerator {
             //This is neither full not empty, yet it's invisible. So the other strategies won't work.
             //Default to stone
             isUniqueCallback.set(false);
-            return Blocks.STONE.getDefaultState();
+            return Blocks.STONE.defaultBlockState();
         }
 
         //=== FLUIDS ===
-        if (moddedBlock instanceof FluidBlock) {
+        if (moddedBlock instanceof LiquidBlock) {
             isUniqueCallback.set(false);
             return copyAllProperties(moddedState, Blocks.WATER);
         }
 
         //=== LEAVES ===
-        if (moddedBlock instanceof LeavesBlock || moddedState.isIn(BlockTags.LEAVES)) { //TODO I don't like that leaves can be set tags in datapacks, it might cause issues. However, as not every leaf block extends LeavesBlock I can't see much of a better option. Except to maybe check the id if it ends on "_leaves"
+        if (moddedBlock instanceof LeavesBlock || moddedState.is(BlockTags.LEAVES)) { //TODO I don't like that leaves can be set tags in datapacks, it might cause issues. However, as not every leaf block extends LeavesBlock I can't see much of a better option. Except to maybe check the id if it ends on "_leaves"
             try {
                 isUniqueCallback.set(true);
 
                 var state = manager.requestBlockState(BlockStateProfile.LEAVES_PROFILE, modelId);
-                return moddedState.contains(Properties.WATERLOGGED) ? state.with(Properties.WATERLOGGED, moddedState.get(Properties.WATERLOGGED)) : state;
+                return moddedState.hasProperty(BlockStateProperties.WATERLOGGED) ? state.setValue(BlockStateProperties.WATERLOGGED, moddedState.getValue(BlockStateProperties.WATERLOGGED)) : state;
             } catch (BlockStateManager.StateLimitReachedException ignored) {}
         }
 
@@ -135,26 +149,26 @@ public class BlockPolyGenerator {
         if (moddedBlock instanceof FenceGateBlock) {
             try {
                 isUniqueCallback.set(true);
-                return manager.requestBlockState((moddedState.get(FenceGateBlock.OPEN) ? BlockStateProfile.OPEN_FENCE_GATE_PROFILE : BlockStateProfile.FENCE_GATE_PROFILE)
-                        .and(state -> propertyMatches(state, moddedState, FenceGateBlock.IN_WALL, HorizontalFacingBlock.FACING)), modelId);
+                return manager.requestBlockState((moddedState.getValue(FenceGateBlock.OPEN) ? BlockStateProfile.OPEN_FENCE_GATE_PROFILE : BlockStateProfile.FENCE_GATE_PROFILE)
+                        .and(state -> propertyMatches(state, moddedState, FenceGateBlock.IN_WALL, HorizontalDirectionalBlock.FACING)), modelId);
             } catch (BlockStateManager.StateLimitReachedException ignored) {}
         }
 
         //=== (TRAP)DOORS ===
         if (moddedBlock instanceof DoorBlock doorBlock) {
-            boolean isIronLike = !doorBlock.getBlockSetType().canOpenByHand();
+            boolean isIronLike = !doorBlock.type().canOpenByHand();
             try {
                 isUniqueCallback.set(true);
                 return manager.requestBlockState((isIronLike ? BlockStateProfile.METAL_DOOR_PROFILE : BlockStateProfile.DOOR_PROFILE)
                         .and((state) -> propertyMatches(state, moddedState, DoorBlock.OPEN, DoorBlock.FACING, DoorBlock.HINGE, DoorBlock.HALF)), modelId);
             } catch (BlockStateManager.StateLimitReachedException ignored) {}
         }
-        if (moddedBlock instanceof TrapdoorBlock trapdoorBlock) {
-            boolean isIronLike = !((TrapdoorBlockAccessor)trapdoorBlock).getBlockSetType().canOpenByHand();
+        if (moddedBlock instanceof TrapDoorBlock trapdoorBlock) {
+            boolean isIronLike = !((TrapdoorBlockAccessor)trapdoorBlock).getType().canOpenByHand();
             try {
                 isUniqueCallback.set(true);
                 return manager.requestBlockState((isIronLike ? BlockStateProfile.METAL_TRAPDOOR_PROFILE : BlockStateProfile.TRAPDOOR_PROFILE)
-                        .and((state) -> propertyMatches(state, moddedState, TrapdoorBlock.OPEN, TrapdoorBlock.FACING, TrapdoorBlock.HALF, TrapdoorBlock.WATERLOGGED)), modelId);
+                        .and((state) -> propertyMatches(state, moddedState, TrapDoorBlock.OPEN, TrapDoorBlock.FACING, TrapDoorBlock.HALF, TrapDoorBlock.WATERLOGGED)), modelId);
             } catch (BlockStateManager.StateLimitReachedException ignored) {}
         }
 
@@ -168,7 +182,7 @@ public class BlockPolyGenerator {
             } catch (BlockStateManager.StateLimitReachedException ignored) {}
         }
 
-        if (Util.areEqual(collisionShape, SlabBlockAccessor.getBOTTOM_SHAPE())) {
+        if (Util.areEqual(collisionShape, SlabBlockAccessor.getSHAPE_BOTTOM())) {
             try {
                 isUniqueCallback.set(true);
                 return manager.requestBlockState(BlockStateProfile.SCULK_SENSOR_PROFILE.and(
@@ -178,20 +192,20 @@ public class BlockPolyGenerator {
         }
 
         //=== STAIRS ===
-        if (moddedBlock instanceof StairsBlock) {
+        if (moddedBlock instanceof StairBlock) {
             try {
                 isUniqueCallback.set(true);
                 return manager.requestBlockState(BlockStateProfile.WAXED_COPPER_STAIR_PROFILE.and(
-                        state -> propertyMatches(state, moddedState, StairsBlock.FACING, StairsBlock.HALF, StairsBlock.WATERLOGGED, StairsBlock.SHAPE)
+                        state -> propertyMatches(state, moddedState, StairBlock.FACING, StairBlock.HALF, StairBlock.WATERLOGGED, StairBlock.SHAPE)
                 ), modelId);
             } catch (BlockStateManager.StateLimitReachedException ignored) {}
         }
 
         //=== FULL BLOCKS ===
         // Blocks that have a full top face and at least something on the bottom are considered full blocks. This works better for some blocks
-        if (Block.isFaceFullSquare(collisionShape, Direction.UP) && collisionShape.getMin(Direction.Axis.Y) <= 0) {
+        if (Block.isFaceFull(collisionShape, Direction.UP) && collisionShape.min(Direction.Axis.Y) <= 0) {
 
-            if (!moddedState.isOpaque()) {
+            if (!moddedState.canOcclude()) {
                 // Chorus flowers are full cubes & are not opaque.
                 // There are only 4 available states to reuse though
                 try {
@@ -218,13 +232,13 @@ public class BlockPolyGenerator {
         if (collisionShape.isEmpty() && !(moddedState.getBlock() instanceof WallBlock)) {
 
             try {
-                if (moddedState.isIn(BlockTags.CLIMBABLE)) {
+                if (moddedState.is(BlockTags.CLIMBABLE)) {
                     isUniqueCallback.set(true);
                     return manager.requestBlockState(BlockStateProfile.CLIMBABLE_PROFILE, modelId);
                 }
             } catch (BlockStateManager.StateLimitReachedException ignored) {}
 
-            var outlineShape = moddedState.getOutlineShape(fakeWorld, BlockPos.ORIGIN);
+            var outlineShape = moddedState.getShape(fakeWorld, BlockPos.ZERO);
 
             if (outlineShape.isEmpty()) {
                 try {
@@ -235,7 +249,7 @@ public class BlockPolyGenerator {
                 } catch (BlockStateManager.StateLimitReachedException ignored) {}
             }
 
-            if (outlineShape.getMax(Direction.Axis.Y) <= (1.0f / 16.0f)) {
+            if (outlineShape.max(Direction.Axis.Y) <= (1.0f / 16.0f)) {
                 try {
                     isUniqueCallback.set(true);
                     return manager.requestBlockState(BlockStateProfile.PRESSURE_PLATE_PROFILE.and(
@@ -253,7 +267,7 @@ public class BlockPolyGenerator {
         }
 
         //=== FARMLAND-LIKE BLOCKS ===
-        if (Util.areEqual(collisionShape, Blocks.FARMLAND.getDefaultState().getCollisionShape(fakeWorld, BlockPos.ORIGIN, ShapeContext.absent()))) {
+        if (Util.areEqual(collisionShape, Blocks.FARMLAND.defaultBlockState().getCollisionShape(fakeWorld, BlockPos.ZERO, CollisionContext.empty()))) {
             try {
                 isUniqueCallback.set(true);
                 return manager.requestBlockState(BlockStateProfile.FARMLAND_PROFILE, modelId);
@@ -261,7 +275,7 @@ public class BlockPolyGenerator {
         }
 
         //=== CACTUS-LIKE BLOCKS ===
-        if (Util.areEqual(collisionShape, Blocks.CACTUS.getDefaultState().getCollisionShape(fakeWorld, BlockPos.ORIGIN, ShapeContext.absent()))) {
+        if (Util.areEqual(collisionShape, Blocks.CACTUS.defaultBlockState().getCollisionShape(fakeWorld, BlockPos.ZERO, CollisionContext.empty()))) {
             try {
                 isUniqueCallback.set(true);
                 return manager.requestBlockState(BlockStateProfile.CACTUS_PROFILE, modelId);
@@ -271,7 +285,7 @@ public class BlockPolyGenerator {
         //=== DEFAULT ===
         //PolyMc can't handle this block. TODO implement more general polys to more of these cases
         isUniqueCallback.set(false);
-        return Blocks.STONE.getDefaultState();
+        return Blocks.STONE.defaultBlockState();
     }
 
     public static boolean propertyMatches(BlockState a, BlockState b, Property<?>... properties) {
@@ -282,11 +296,11 @@ public class BlockPolyGenerator {
     }
 
     public static <T extends Comparable<T>> boolean propertyMatches(BlockState a, BlockState b, Property<T> property) {
-        return a.get(property) == b.get(property);
+        return a.getValue(property) == b.getValue(property);
     }
 
     public static BlockState copyAllProperties(BlockState input, Block output) {
-        BlockState out = output.getDefaultState();
+        BlockState out = output.defaultBlockState();
         for (Property<?> p : input.getProperties()) {
             out = copyProperty(out, input, p);
         }
@@ -294,7 +308,7 @@ public class BlockPolyGenerator {
     }
 
     private static <T extends Comparable<T>> BlockState copyProperty(BlockState a, BlockState b, Property<T> p) {
-        return a.with(p, b.get(p));
+        return a.setValue(p, b.getValue(p));
     }
 
     /**
@@ -305,7 +319,7 @@ public class BlockPolyGenerator {
         try {
             builder.registerBlockPoly(block, generatePoly(block, builder));
         } catch (Exception e) {
-            PolyMc.LOGGER.error("Failed to generate a poly for block " + block.getTranslationKey());
+            PolyMc.LOGGER.error("Failed to generate a poly for block " + block.getDescriptionId());
             e.printStackTrace();
             PolyMc.LOGGER.error("Attempting to recover by using a default poly. Please report this");
             builder.registerBlockPoly(block, new SimpleReplacementPoly(Blocks.RED_STAINED_GLASS));
@@ -315,7 +329,7 @@ public class BlockPolyGenerator {
     /**
      * A world filled with air except for a single block at 0,0,0.
      */
-    public static class FakedWorld implements BlockView {
+    public static class FakedWorld implements BlockGetter {
         public final BlockState blockState;
         public @Nullable BlockEntity blockEntity;
 
@@ -330,18 +344,18 @@ public class BlockPolyGenerator {
         @Override
         @Nullable
         public BlockEntity getBlockEntity(BlockPos pos) {
-            if (this.blockEntity == null && blockState.getBlock() instanceof BlockEntityProvider beProvider) {
-                this.blockEntity = beProvider.createBlockEntity(BlockPos.ORIGIN, blockState);
+            if (this.blockEntity == null && blockState.getBlock() instanceof EntityBlock beProvider) {
+                this.blockEntity = beProvider.newBlockEntity(BlockPos.ZERO, blockState);
             }
             return blockEntity;
         }
 
         @Override
         public BlockState getBlockState(BlockPos pos) {
-            if (pos.equals(BlockPos.ORIGIN)) {
+            if (pos.equals(BlockPos.ZERO)) {
                 return blockState;
             }
-            return Blocks.AIR.getDefaultState();
+            return Blocks.AIR.defaultBlockState();
         }
 
         @Override
@@ -355,7 +369,7 @@ public class BlockPolyGenerator {
         }
 
         @Override
-        public int getBottomY() {
+        public int getMinY() {
             return 0;
         }
     }

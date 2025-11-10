@@ -3,12 +3,12 @@ package io.github.theepicblock.polymc.api.resource.json;
 import io.github.theepicblock.polymc.api.resource.PolyMcAsset;
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.resource.json.JBlockStateImpl;
-import net.minecraft.block.BlockState;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.Set;
+import net.minecraft.world.level.block.state.BlockState;
 
 public interface JBlockState extends PolyMcAsset {
     void setVariant(String propertyString, JBlockStateVariant[] variants);
@@ -36,12 +36,12 @@ public interface JBlockState extends PolyMcAsset {
                 // Split "facing=east" into "facing" and "east"
                 var pair = property.split("=", 2);
 
-                var blockProperty = state.getBlock().getStateManager().getProperty(pair[0]);
+                var blockProperty = state.getBlock().getStateDefinition().getProperty(pair[0]);
                 if (blockProperty == null) continue mainloop;
 
-                Optional<?> parsedValue = blockProperty.parse(pair[1]);
+                Optional<?> parsedValue = blockProperty.getValue(pair[1]);
                 if (parsedValue.isEmpty()) continue mainloop;
-                if (!(parsedValue.get() == state.get(blockProperty))) {
+                if (!(parsedValue.get() == state.getValue(blockProperty))) {
                     continue mainloop;
                 }
             }

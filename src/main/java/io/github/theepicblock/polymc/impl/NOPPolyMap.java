@@ -8,28 +8,26 @@ import io.github.theepicblock.polymc.api.item.ItemLocation;
 import io.github.theepicblock.polymc.api.item.ItemPoly;
 import io.github.theepicblock.polymc.api.resource.PolyMcResourcePack;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 public class NOPPolyMap implements PolyMap {
     public static final NOPPolyMap INSTANCE = new NOPPolyMap();
     @Override
-    public ItemStack getClientItem(ItemStack serverItem, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location) {
+    public ItemStack getClientItem(ItemStack serverItem, @Nullable ServerPlayer player, @Nullable ItemLocation location) {
         return serverItem;
     }
 
     @Override
-    public BlockState getClientState(BlockState serverBlock, @Nullable ServerPlayerEntity player) {
+    public BlockState getClientState(BlockState serverBlock, @Nullable ServerPlayer player) {
         return serverBlock;
     }
 
@@ -39,7 +37,7 @@ public class NOPPolyMap implements PolyMap {
     }
 
     @Override
-    public GuiPoly getGuiPoly(ScreenHandlerType<?> serverGuiType) {
+    public GuiPoly getGuiPoly(MenuType<?> serverGuiType) {
         return null;
     }
 
@@ -54,7 +52,7 @@ public class NOPPolyMap implements PolyMap {
     }
 
     @Override
-    public ItemStack reverseClientItem(ItemStack clientItem, @Nullable ServerPlayerEntity player) {
+    public ItemStack reverseClientItem(ItemStack clientItem, @Nullable ServerPlayer player) {
         return clientItem;
     }
 

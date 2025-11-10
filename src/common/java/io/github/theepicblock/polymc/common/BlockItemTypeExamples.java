@@ -1,8 +1,8 @@
 package io.github.theepicblock.polymc.common;
 
-import net.minecraft.item.BlockItem;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.item.BlockItem;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -21,12 +21,12 @@ public class BlockItemTypeExamples {
         inner = new HashMap<>();
     }
 
-    public BlockItemTypeExamples(PacketByteBuf buf) {
-        inner = buf.readMap(i -> new HashMap<>(), BlockItemType::new, buf2 -> {
+    public BlockItemTypeExamples(FriendlyByteBuf buf) {
+        inner = buf.readMap(i -> new HashMap<BlockItemType, BlockItem[]>(), BlockItemType::new, buf2 -> {
             var length = buf.readVarInt();
             var arr = new BlockItem[length];
             for (int i = 0; i < arr.length; i++) {
-                arr[i] = (BlockItem)Registries.BLOCK.get(buf2.readVarInt()).asItem();
+                arr[i] = (BlockItem)BuiltInRegistries.BLOCK.byId(buf2.readVarInt()).asItem();
             }
             return arr;
         });
@@ -56,16 +56,16 @@ public class BlockItemTypeExamples {
         }
     }
 
-    public void write(PacketByteBuf buf) {
+    public void write(FriendlyByteBuf buf) {
         buf.writeMap(inner, BlockItemType::write, BlockItemTypeExamples::writeArr);
     }
 
-    private static void writeArr(PacketByteBuf buf, BlockItem[] arr) {
+    private static void writeArr(FriendlyByteBuf buf, BlockItem[] arr) {
         buf.writeVarInt(arr.length);
         for (var e : arr) {
             // If these id's changed then this will be the least of our concerns.
             // Besides, the code to fix that exact issue is right next door
-            buf.writeVarInt(Registries.BLOCK.getRawId(e.getBlock()));
+            buf.writeVarInt(BuiltInRegistries.BLOCK.getId(e.getBlock()));
         }
     }
 }

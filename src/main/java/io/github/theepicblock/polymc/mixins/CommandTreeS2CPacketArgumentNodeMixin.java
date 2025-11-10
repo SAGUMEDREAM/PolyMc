@@ -2,25 +2,25 @@ package io.github.theepicblock.polymc.mixins;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.command.argument.ArgumentTypes;
-import net.minecraft.command.argument.serialize.ArgumentSerializer;
-import net.minecraft.registry.Registries;
+import net.minecraft.commands.synchronization.ArgumentTypeInfo;
+import net.minecraft.commands.synchronization.ArgumentTypeInfos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import xyz.nucleoid.packettweaker.PacketContext;
 
-@Mixin(targets = "net/minecraft/network/packet/s2c/play/CommandTreeS2CPacket$ArgumentNode")
+@Mixin(targets = "net/minecraft/network/protocol/game/ClientboundCommandsPacket$ArgumentNodeStub")
 public class CommandTreeS2CPacketArgumentNodeMixin {
-    @ModifyArg(method = "write(Lnet/minecraft/network/PacketByteBuf;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/packet/s2c/play/CommandTreeS2CPacket$ArgumentNode;write(Lnet/minecraft/network/PacketByteBuf;Lnet/minecraft/command/argument/serialize/ArgumentSerializer$ArgumentTypeProperties;)V"))
-    private ArgumentSerializer.ArgumentTypeProperties<?> replaceProperties(ArgumentSerializer.ArgumentTypeProperties<?> original) {
+    @ModifyArg(method = "write(Lnet/minecraft/network/FriendlyByteBuf;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/protocol/game/ClientboundCommandsPacket$ArgumentNodeStub;serializeCap(Lnet/minecraft/network/FriendlyByteBuf;Lnet/minecraft/commands/synchronization/ArgumentTypeInfo$Template;)V"))
+    private ArgumentTypeInfo.Template<?> replaceProperties(ArgumentTypeInfo.Template<?> original) {
         var player = PacketContext.get();
         var map = Util.tryGetPolyMap(player);
 
-        var id = Registries.COMMAND_ARGUMENT_TYPE.getId(original.getSerializer());
+        var id = BuiltInRegistries.COMMAND_ARGUMENT_TYPE.getKey(original.type());
         var isBrigadier = id != null && id.getNamespace().equals("brigadier");
-        if (!map.canReceiveEntry(Registries.COMMAND_ARGUMENT_TYPE, original.getSerializer()) && !isBrigadier) {
-            return ArgumentTypes.getArgumentTypeProperties(StringArgumentType.word());
+        if (!map.canReceiveEntry(BuiltInRegistries.COMMAND_ARGUMENT_TYPE, original.type()) && !isBrigadier) {
+            return ArgumentTypeInfos.unpack(StringArgumentType.word());
         }
         return original;
     }

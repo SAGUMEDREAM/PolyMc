@@ -3,9 +3,6 @@ package io.github.theepicblock.polymc.impl.resource;
 import io.github.theepicblock.polymc.api.resource.ClientJarResources;
 import io.github.theepicblock.polymc.api.resource.ModdedResources;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
-import net.minecraft.resource.InputSupplier;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Pair;
 import nl.theepicblock.resourcelocatorapi.ResourceLocatorApi;
 import nl.theepicblock.resourcelocatorapi.api.AssetContainer;
 import org.jetbrains.annotations.NotNull;
@@ -15,18 +12,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Set;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.IoSupplier;
+import net.minecraft.util.Tuple;
 
 public class ModdedResourceContainerImpl implements ModdedResources {
     private final AssetContainer inner = ResourceLocatorApi.createGlobalAssetContainer();
     private ClientJarResourcesImpl clientJar = null;
 
     @Override
-    public @Nullable InputSupplier<InputStream> getInputStreamSupplier(String namespace, String path) {
+    public @Nullable IoSupplier<InputStream> getInputStreamSupplier(String namespace, String path) {
         return inner.getAsset(namespace, path);
     }
 
     @Override
-    public @NotNull List<InputSupplier<InputStream>> getInputStreams(String namespace, String path) {
+    public @NotNull List<IoSupplier<InputStream>> getInputStreams(String namespace, String path) {
         return inner.getAllAssets(namespace, path);
     }
 
@@ -36,12 +36,12 @@ public class ModdedResourceContainerImpl implements ModdedResources {
     }
 
     @Override
-    public @NotNull Set<Pair<Identifier,InputSupplier<InputStream>>> locateLanguageFiles() {
+    public @NotNull Set<Tuple<ResourceLocation,IoSupplier<InputStream>>> locateLanguageFiles() {
         return inner.locateFiles("lang");
     }
 
     @Override
-    public @NotNull Set<Pair<Identifier, InputSupplier<InputStream>>> locateFiles(String prefix) {
+    public @NotNull Set<Tuple<ResourceLocation, IoSupplier<InputStream>>> locateFiles(String prefix) {
         return inner.locateFiles(prefix);
     }
 

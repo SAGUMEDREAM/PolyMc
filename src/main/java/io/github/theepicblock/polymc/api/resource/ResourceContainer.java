@@ -7,11 +7,11 @@ import io.github.theepicblock.polymc.impl.resource.ResourceConstants;
 import io.github.theepicblock.polymc.impl.resource.json.JBlockStateImpl;
 import io.github.theepicblock.polymc.impl.resource.json.JModelImpl;
 import io.github.theepicblock.polymc.impl.resource.json.JSoundEventRegistryImpl;
-import net.minecraft.resource.InputSupplier;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
+import net.minecraft.server.packs.resources.IoSupplier;
 
 public interface ResourceContainer {
     default @Nullable TextureAsset getTexture(String namespace, String texture) {
@@ -64,7 +64,7 @@ public interface ResourceContainer {
         return stream == null ? null : JModelImpl.of(stream, namespace+":"+path);
     }
 
-    @Nullable InputSupplier<InputStream> getInputStreamSupplier(String namespace, String path);
+    @Nullable IoSupplier<InputStream> getInputStreamSupplier(String namespace, String path);
 
     default InputStream getInputStream(String namespace, String path) {
         var supplier = getInputStreamSupplier(namespace, path);

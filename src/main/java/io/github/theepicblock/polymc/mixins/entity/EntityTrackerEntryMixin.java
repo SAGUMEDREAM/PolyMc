@@ -10,13 +10,6 @@ import io.github.theepicblock.polymc.impl.poly.entity.EntityWizard;
 import io.github.theepicblock.polymc.impl.poly.wizard.EntityWizardInfo;
 import io.github.theepicblock.polymc.impl.poly.wizard.PolyMapFilteredPlayerView;
 import io.github.theepicblock.polymc.impl.poly.wizard.SinglePlayerView;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.attribute.EntityAttributeInstance;
-import net.minecraft.server.network.EntityTrackerEntry;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -27,11 +20,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import net.minecraft.server.level.ServerEntity;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 
-@Mixin(EntityTrackerEntry.class)
+@Mixin(ServerEntity.class)
 public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
     @Shadow @Final private Entity entity;
-    @Shadow @Final private ServerWorld world;
+    @Shadow @Final private ServerLevel level;
 
     @SuppressWarnings("unchecked")
     @Unique
@@ -40,7 +40,7 @@ public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
         if (poly == null) return null;
         try {
             var wizard = poly.createWizard(new EntityWizardInfo(this.entity), this.entity);
-            if (wizard != null) ((WizardTickerDuck)this.world).polymc$addEntityTicker(polyMap, wizard);
+            if (wizard != null) ((WizardTickerDuck)this.level).polymc$addEntityTicker(polyMap, wizard);
             return wizard;
         } catch (Throwable t) {
             PolyMc.LOGGER.error("Failed to create block wizard for "+this.entity+" | "+poly);
@@ -54,10 +54,10 @@ public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
         return wizards;
     }
 
-    @Inject(method = "tick", at = @At("HEAD"))
+    @Inject(method = "sendChanges", at = @At("HEAD"))
     private void onTick(CallbackInfo ci) {
         // FIXME, use the list of listener inside ThreadedAnvilChunkStorage$EntityTracker
-        var allPlayers = PolyMapFilteredPlayerView.getAll(world, this.entity.getBlockPos());
+        var allPlayers = PolyMapFilteredPlayerView.getAll(level, this.entity.blockPosition());
         wizards.forEach((polyMap, wizard) -> {
             if (wizard == null) return;
             var filteredView = new PolyMapFilteredPlayerView(allPlayers, polyMap);
@@ -72,8 +72,8 @@ public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
         });
     }
 
-    @Inject(method = "startTracking", at = @At("HEAD"))
-    private void onStartTracking(ServerPlayerEntity player, CallbackInfo ci) {
+    @Inject(method = "addPairing", at = @At("HEAD"))
+    private void onStartTracking(ServerPlayer player, CallbackInfo ci) {
         var polymap = PolyMapProvider.getPolyMap(player);
         var wizard = wizards.get(polymap);
         if (wizard != null) {
@@ -88,8 +88,8 @@ public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
         }
     }
 
-    @Inject(method = "stopTracking", at = @At("HEAD"))
-    private void onStopTracking(ServerPlayerEntity player, CallbackInfo ci) {
+    @Inject(method = "removePairing", at = @At("HEAD"))
+    private void onStopTracking(ServerPlayer player, CallbackInfo ci) {
         var polymap = PolyMapProvider.getPolyMap(player);
         var wizard = wizards.get(polymap);
         if (wizard != null) {
@@ -104,7 +104,7 @@ public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
         }
     }
 
-    @Inject(method = "syncEntityData", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "sendDirtyEntityData", at = @At("HEAD"), cancellable = true)
     private void preventSyncEntityData(CallbackInfo ci) {
 
         if (wizards.isEmpty()) return;
@@ -115,7 +115,7 @@ public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
             if (!(wizard instanceof EntityWizard<?> entityWizard)) return;
 
             hasValidWizard.set(true);
-            var allPlayers = PolyMapFilteredPlayerView.getAll(world, this.entity.getBlockPos());
+            var allPlayers = PolyMapFilteredPlayerView.getAll(level, this.entity.blockPosition());
             var filteredView = new PolyMapFilteredPlayerView(allPlayers, polyMap);
 
             try {
@@ -130,7 +130,7 @@ public class EntityTrackerEntryMixin implements EntityTrackerEntryDuck {
         if (!hasValidWizard.get()) return;
 
         if (this.entity instanceof LivingEntity livingEntity) {
-            Set<EntityAttributeInstance> set = ((LivingEntity)this.entity).getAttributes().getTracked();
+            Set<AttributeInstance> set = ((LivingEntity)this.entity).getAttributes().getAttributesToSync();
             set.clear();
         }
 

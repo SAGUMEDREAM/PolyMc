@@ -2,10 +2,6 @@ package io.github.theepicblock.polymc.mixins.block;
 
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.mixins.TACSAccessor;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ChunkHolder;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.chunk.AbstractChunkHolder;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -13,11 +9,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.List;
+import net.minecraft.server.level.ChunkHolder;
+import net.minecraft.server.level.GenerationChunkHolder;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 
 @Mixin(ChunkHolder.class)
-public abstract class FixLighting extends AbstractChunkHolder {
+public abstract class FixLighting extends GenerationChunkHolder {
 
-    @Shadow @Final private ChunkHolder.PlayersWatchingChunkProvider playersWatchingChunkProvider;
+    @Shadow @Final private ChunkHolder.PlayerProvider playerProvider;
 
     public FixLighting(ChunkPos pos) {
         super(pos);
@@ -27,11 +27,11 @@ public abstract class FixLighting extends AbstractChunkHolder {
      * Minecraft usually only sends lighting packets when a chunk is on the watch distance edge.
      * This mixin forces lighting packets to be sent regardless, to make sure vanilla clients are kept in sync.
      */
-    @Redirect(method = "flushUpdates", at = @At(value="INVOKE", target = "Lnet/minecraft/server/world/ChunkHolder$PlayersWatchingChunkProvider;getPlayersWatchingChunk(Lnet/minecraft/util/math/ChunkPos;Z)Ljava/util/List;"))
-    private List<ServerPlayerEntity> onGetPlayersWatchingChunk(ChunkHolder.PlayersWatchingChunkProvider watchProvider, ChunkPos chunkPos, boolean onlyOnWatchDistanceEdge) {
+    @Redirect(method = "broadcastChanges", at = @At(value="INVOKE", target = "Lnet/minecraft/server/level/ChunkHolder$PlayerProvider;getPlayers(Lnet/minecraft/world/level/ChunkPos;Z)Ljava/util/List;"))
+    private List<ServerPlayer> onGetPlayersWatchingChunk(ChunkHolder.PlayerProvider watchProvider, ChunkPos chunkPos, boolean onlyOnWatchDistanceEdge) {
 
         // Get all the watchers anyway
-        List<ServerPlayerEntity> watchers = watchProvider.getPlayersWatchingChunk(this.pos, false);
+        List<ServerPlayer> watchers = watchProvider.getPlayers(this.pos, false);
 
         if (onlyOnWatchDistanceEdge == false) {
             // This will be sent to everyone regardless. Just use the normal method
@@ -51,7 +51,7 @@ public abstract class FixLighting extends AbstractChunkHolder {
                         return true;
                     }
 
-                    var isOnEdge = watcher.getChunkFilter().isWithinDistance(pos) && !watcher.getChunkFilter().isWithinDistanceExcludingEdge(pos.x, pos.z);
+                    var isOnEdge = watcher.getChunkTrackingView().contains(pos) && !watcher.getChunkTrackingView().isInViewDistance(pos.x, pos.z);
 
                     return isOnEdge;
                 })

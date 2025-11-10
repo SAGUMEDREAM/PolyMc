@@ -18,9 +18,9 @@
 package io.github.theepicblock.polymc.impl.poly.block;
 
 import io.github.theepicblock.polymc.api.block.BlockPoly;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.state.property.Property;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 
 /**
  * A block poly that replaces a block with another block, whilst retaining the properties
@@ -35,7 +35,7 @@ public class PropertyRetainingReplacementPoly implements BlockPoly {
 
     @Override
     public BlockState getClientBlock(BlockState input) {
-        BlockState output = clientBlock.getDefaultState();
+        BlockState output = clientBlock.defaultBlockState();
         for (Property<?> p : input.getProperties()) {
             output = copyProperty(output, input, p);
         }
@@ -46,11 +46,11 @@ public class PropertyRetainingReplacementPoly implements BlockPoly {
      * Copies Property p from BlockState b into BlockState a
      */
     private <T extends Comparable<T>> BlockState copyProperty(BlockState a, BlockState b, Property<T> p) {
-        return a.with(p, b.get(p));
+        return a.setValue(p, b.getValue(p));
     }
 
     @Override
     public String getDebugInfo(Block obj) {
-        return clientBlock.getTranslationKey();
+        return clientBlock.getDescriptionId();
     }
 }

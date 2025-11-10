@@ -1,16 +1,16 @@
 package io.github.theepicblock.polymc.mixins.item;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.minecraft.component.type.ItemEnchantmentsComponent;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Mixin(ItemEnchantmentsComponent.class)
+@Mixin(ItemEnchantments.class)
 public interface ItemEnchantmentsComponentAccessor {
 
     @Accessor
-    Object2IntOpenHashMap<RegistryEntry<Enchantment>> getEnchantments();
+    Object2IntOpenHashMap<Holder<Enchantment>> getEnchantments();
 }

@@ -27,7 +27,6 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import eu.pb4.polymer.common.api.PolymerCommonUtils;
 import io.github.theepicblock.polymc.PolyMc;
 import io.github.theepicblock.polymc.api.DebugInfoProvider;
@@ -37,6 +36,7 @@ import io.github.theepicblock.polymc.api.SharedValuesKey;
 import io.github.theepicblock.polymc.api.block.BlockPoly;
 import io.github.theepicblock.polymc.api.entity.EntityPoly;
 import io.github.theepicblock.polymc.api.gui.GuiPoly;
+import io.github.theepicblock.polymc.api.item.CustomDataAccessor;
 import io.github.theepicblock.polymc.api.item.ItemLocation;
 import io.github.theepicblock.polymc.api.item.ItemPoly;
 import io.github.theepicblock.polymc.api.item.ItemTransformer;
@@ -47,30 +47,33 @@ import io.github.theepicblock.polymc.impl.resource.ModdedResourceContainerImpl;
 import io.github.theepicblock.polymc.impl.resource.ResourcePackImplementation;
 import io.github.theepicblock.polymc.impl.resource.json.JModelImpl;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.advancement.AdvancementDisplay;
-import net.minecraft.block.*;
-import net.minecraft.component.ComponentChanges;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtElement;
+import net.minecraft.ChatFormatting;
+import net.minecraft.advancements.DisplayInfo;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.registry.RegistryOps;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.server.ServerAdvancementLoader;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextCodecs;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.JsonHelper;
-import net.minecraft.util.math.Direction;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.resources.RegistryOps;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.ServerAdvancementManager;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.GsonHelper;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.PipeBlock;
+import net.minecraft.world.level.block.TripWireBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -85,23 +88,23 @@ import java.util.*;
 public class PolyMapImpl implements PolyMap {
     /**
      * The nbt tag name that stores the original item nbt so it can be restored
-     * @see PolyMap#getClientItem(ItemStack, ServerPlayerEntity, ItemLocation)
-     * @see #recoverOriginalItem(ItemStack, ServerPlayerEntity)
+     * @see PolyMap#getClientItem(ItemStack, ServerPlayer, ItemLocation)
+     * @see #recoverOriginalItem(ItemStack, ServerPlayer)
      */
     private static final String ORIGINAL_ITEM_NBT = "PolyMcOriginal";
     private static final boolean ALWAYS_ADD_CREATIVE_NBT = ConfigManager.getConfig().alwaysSendFullNbt;
-    private static final List<Identifier> ADVANCEMENT_BACKGROUNDS = new ArrayList<>();
+    private static final List<ResourceLocation> ADVANCEMENT_BACKGROUNDS = new ArrayList<>();
     /**
      * Encodes all data that's meant to be server controlled. In practice this is simply all the ItemStack data minus
      * the count
      */
-    private static final Codec<ItemStack> ITEM_DATA_CODEC = ItemStack.UNCOUNTED_CODEC;
+    private static final Codec<ItemStack> ITEM_DATA_CODEC = ItemStack.SINGLE_ITEM_CODEC;
     public static final MapCodec<Optional<ItemStack>> ORIGINAL_ITEM_CODEC = ITEM_DATA_CODEC.optionalFieldOf(ORIGINAL_ITEM_NBT);
 
     private final ImmutableMap<Item,ItemPoly> itemPolys;
     private final ItemTransformer[] globalItemPolys;
     private final ImmutableMap<Block,BlockPoly> blockPolys;
-    private final ImmutableMap<ScreenHandlerType<?>,GuiPoly> guiPolys;
+    private final ImmutableMap<MenuType<?>,GuiPoly> guiPolys;
     private final ImmutableMap<EntityType<?>,EntityPoly<?>> entityPolys;
     private final ImmutableList<SharedValuesKey.ResourceContainer> sharedValueResources;
 
@@ -110,7 +113,7 @@ public class PolyMapImpl implements PolyMap {
     public PolyMapImpl(ImmutableMap<Item,ItemPoly> itemPolys,
                        ItemTransformer[] globalItemPolys,
                        ImmutableMap<Block,BlockPoly> blockPolys,
-                       ImmutableMap<ScreenHandlerType<?>,GuiPoly> guiPolys,
+                       ImmutableMap<MenuType<?>,GuiPoly> guiPolys,
                        ImmutableMap<EntityType<?>,EntityPoly<?>> entityPolys,
                        ImmutableList<SharedValuesKey.ResourceContainer> sharedValueResources) {
         this.itemPolys = itemPolys;
@@ -123,10 +126,10 @@ public class PolyMapImpl implements PolyMap {
         this.hasBlockWizards = blockPolys.values().stream().anyMatch(BlockPoly::hasWizard);
     }
 
-    public static void updateAdvancementBackgrounds(ServerAdvancementLoader advancementLoader) {
+    public static void updateAdvancementBackgrounds(ServerAdvancementManager advancementLoader) {
         ADVANCEMENT_BACKGROUNDS.clear();
-        for (var advancement : advancementLoader.getAdvancements()) {
-            var optional = advancement.value().display().map(AdvancementDisplay::getBackground).flatMap(x -> x);
+        for (var advancement : advancementLoader.getAllAdvancements()) {
+            var optional = advancement.value().display().map(DisplayInfo::getBackground).flatMap(x -> x);
             if (optional.isPresent()) {
                 var texture = optional.get();
                 ADVANCEMENT_BACKGROUNDS.add(texture.texturePath());
@@ -135,7 +138,7 @@ public class PolyMapImpl implements PolyMap {
     }
 
     @Override
-    public ItemStack getClientItem(ItemStack serverItem, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location) {
+    public ItemStack getClientItem(ItemStack serverItem, @Nullable ServerPlayer player, @Nullable ItemLocation location) {
         if (serverItem.isEmpty()) {
             return ItemStack.EMPTY;
         }
@@ -150,17 +153,20 @@ public class PolyMapImpl implements PolyMap {
         }
 
         // If max count varies between the client and server item, set the max count.
-        if (ret.getMaxCount() != serverItem.getMaxCount()) ret.set(DataComponentTypes.MAX_STACK_SIZE, serverItem.getMaxCount());
+        if (ret.getMaxStackSize() != serverItem.getMaxStackSize()) ret.set(DataComponents.MAX_STACK_SIZE, serverItem.getMaxStackSize());
 
-        if ((player == null || player.isCreative() || location == ItemLocation.CREATIVE || ALWAYS_ADD_CREATIVE_NBT) && !ItemStack.areItemsAndComponentsEqual(serverItem, ret) && !serverItem.isEmpty()) {
+        if ((player == null || player.isCreative() || location == ItemLocation.CREATIVE || ALWAYS_ADD_CREATIVE_NBT) && !ItemStack.isSameItemSameComponents(serverItem, ret) && !serverItem.isEmpty()) {
 
-            RegistryOps<NbtElement> registryOps = Util.getRegistryManager(player).getOps(NbtOps.INSTANCE);
+            RegistryOps<Tag> registryOps = Util.getRegistryManager(player).createSerializationContext(NbtOps.INSTANCE);
 
             // Preserves the nbt of the original item, so it can be reverted
             var finalRet = ret;
             PolymerCommonUtils.executeWithoutNetworkingLogic(() -> {
-                NbtComponent.DEFAULT.with(registryOps, ORIGINAL_ITEM_CODEC, Optional.of(serverItem)).result().ifPresent((nbt) -> {
-                    finalRet.set(DataComponentTypes.CUSTOM_DATA, nbt);
+                CustomDataAccessor accessor = (CustomDataAccessor)(Object)CustomData.EMPTY;
+                ORIGINAL_ITEM_CODEC.encode(Optional.of(serverItem), registryOps, registryOps.mapBuilder()).build(accessor.polyMc$getTag()).map((tag->{
+                    return CustomData.of((CompoundTag)tag);
+                })).result().ifPresent((nbt) -> {
+                    finalRet.set(DataComponents.CUSTOM_DATA, nbt);
                 });
             });
         }
@@ -179,7 +185,7 @@ public class PolyMapImpl implements PolyMap {
     }
 
     @Override
-    public GuiPoly getGuiPoly(ScreenHandlerType<?> serverGuiType) {
+    public GuiPoly getGuiPoly(MenuType<?> serverGuiType) {
         return guiPolys.get(serverGuiType);
     }
 
@@ -189,20 +195,21 @@ public class PolyMapImpl implements PolyMap {
     }
 
     @Override
-    public ItemStack reverseClientItem(ItemStack clientItem, @Nullable ServerPlayerEntity player) {
+    public ItemStack reverseClientItem(ItemStack clientItem, @Nullable ServerPlayer player) {
         return recoverOriginalItem(clientItem, player);
     }
 
-    public static ItemStack recoverOriginalItem(ItemStack input, @Nullable ServerPlayerEntity player) {
-        var data = input.get(DataComponentTypes.CUSTOM_DATA);
+    public static ItemStack recoverOriginalItem(ItemStack input, @Nullable ServerPlayer player) {
+        var data = input.get(DataComponents.CUSTOM_DATA);
         if (data == null) {
             return input;
         }
-        var registryOps = Util.getRegistryManager(player).getOps(NbtOps.INSTANCE);
-        var result = data.get(registryOps, ORIGINAL_ITEM_CODEC);
+        var dataAccessor = ((CustomDataAccessor)(Object)data);
+        var registryOps = Util.getRegistryManager(player).createSerializationContext(NbtOps.INSTANCE);
+        var result = dataAccessor.polyMc$read(registryOps, ORIGINAL_ITEM_CODEC);
         if (result.error().isPresent()) {
             var stack = new ItemStack(Items.CLAY_BALL);
-            stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Invalid Item").formatted(Formatting.ITALIC));
+            stack.set(DataComponents.CUSTOM_NAME, Component.literal("Invalid Item").withStyle(ChatFormatting.ITALIC));
             return stack;
         } else {
             // Return the original only if it's present
@@ -236,7 +243,7 @@ public class PolyMapImpl implements PolyMap {
             //Checks if the connected property for the block isn't what it should be
             //If the source block in that direction is string, it should be true. Otherwise false
             return direction.getAxis().isHorizontal() &&
-                    clientState.get(ConnectingBlock.FACING_PROPERTIES.get(direction.getOpposite())) != (sourceState.getBlock() instanceof TripwireBlock);
+                    clientState.getValue(PipeBlock.PROPERTY_BY_DIRECTION.get(direction.getOpposite())) != (sourceState.getBlock() instanceof TripWireBlock);
         }
         return false;
     }
@@ -256,14 +263,14 @@ public class PolyMapImpl implements PolyMap {
 
         for (var prefix : new String[]{"items/", "equipment/", "textures/"}) {
             for (var itemFile : moddedResources.locateFiles(prefix)) {
-                pack.setAsset(itemFile.getLeft().getNamespace(), itemFile.getLeft().getPath(), new SimpleAsset(itemFile.getRight()));
+                pack.setAsset(itemFile.getA().getNamespace(), itemFile.getA().getPath(), new SimpleAsset(itemFile.getB()));
             }
         }
 
         for (var itemFile : moddedResources.locateFiles("models/")) {
-            if (itemFile.getLeft().getPath().endsWith(".json")) {
+            if (itemFile.getA().getPath().endsWith(".json")) {
                 try {
-                    pack.setAsset(itemFile.getLeft().getNamespace(), itemFile.getLeft().getPath(), JModelImpl.of(itemFile.getRight().get(), itemFile.getLeft().toString()));
+                    pack.setAsset(itemFile.getA().getNamespace(), itemFile.getA().getPath(), JModelImpl.of(itemFile.getB().get(), itemFile.getA().toString()));
                 } catch (IOException e) {
                     logger.error(e);
                 }
@@ -275,7 +282,7 @@ public class PolyMapImpl implements PolyMap {
             try {
                 itemPoly.addToResourcePack(item, moddedResources, pack, logger);
             } catch (Throwable e) {
-                logger.warn("Exception whilst generating resources for " + item.getTranslationKey());
+                logger.warn("Exception whilst generating resources for " + item.getDescriptionId());
                 e.printStackTrace();
             }
         });
@@ -285,7 +292,7 @@ public class PolyMapImpl implements PolyMap {
             try {
                 blockPoly.addToResourcePack(block, moddedResources, pack, logger);
             } catch (Throwable e) {
-                logger.warn("Exception whilst generating resources for " + block.getTranslationKey());
+                logger.warn("Exception whilst generating resources for " + block.getDescriptionId());
                 e.printStackTrace();
             }
         });
@@ -304,16 +311,16 @@ public class PolyMapImpl implements PolyMap {
         var languageKeys = new TreeMap<String, Map<String, String>>(); // The first hashmap is per-language. Then it's translationkey->translation
         for (var lang : moddedResources.locateLanguageFiles()) {
             // Ignore fapi
-            if (lang.getLeft().getNamespace().equals("fabric")) continue;
-            try (var streamReader = new InputStreamReader(lang.getRight().get(), StandardCharsets.UTF_8)){
+            if (lang.getA().getNamespace().equals("fabric")) continue;
+            try (var streamReader = new InputStreamReader(lang.getB().get(), StandardCharsets.UTF_8)){
                 // Copy all the language keys into the main map
                 var languageObject = pack.getGson().fromJson(streamReader, JsonObject.class);
-                var mainLangMap = languageKeys.computeIfAbsent(lang.getLeft().getPath(), (key) -> new TreeMap<>());
+                var mainLangMap = languageKeys.computeIfAbsent(lang.getA().getPath(), (key) -> new TreeMap<>());
                 languageObject.entrySet().forEach(entry -> addTranslation(mainLangMap, entry.getKey(), entry.getValue()));
             } catch (JsonSyntaxException e) {
-                logger.warn(lang.getLeft() + " is not a valid json file! " + e.getMessage());
+                logger.warn(lang.getA() + " is not a valid json file! " + e.getMessage());
             } catch (Throwable e) {
-                logger.error("Couldn't parse lang file " + lang.getLeft());
+                logger.error("Couldn't parse lang file " + lang.getA());
                 e.printStackTrace();
             }
         }
@@ -358,14 +365,14 @@ public class PolyMapImpl implements PolyMap {
 
     private void addTranslation(Map<String, String> mainLangMap, String key, JsonElement value) {
         if (value instanceof JsonArray array) { // Assume owo lib text
-            var x = TextCodecs.CODEC.decode(PolyMc.FALLBACK_REGISTRY_MANAGER.getOps(JsonOps.INSTANCE), array).result().map(Pair::getFirst).orElse(null);
+            var x = ComponentSerialization.CODEC.decode(PolyMc.FALLBACK_REGISTRY_MANAGER.createSerializationContext(JsonOps.INSTANCE), array).result().map(Pair::getFirst).orElse(null);
             mainLangMap.put(key, x != null ? x.getString() : "<INVALID TRANSLATION: " + key + ">");
         } else if (value instanceof JsonObject object) { // Assume that one library which allows objects for text
             for (var e : object.entrySet()) {
                 addTranslation(mainLangMap, key + "." + e.getKey(), e.getValue());
             }
         } else { // Vanilla Translation
-            mainLangMap.put(key, JsonHelper.asString(value, key));
+            mainLangMap.put(key, GsonHelper.convertToString(value, key));
         }
     }
 
@@ -377,33 +384,33 @@ public class PolyMapImpl implements PolyMap {
         this.itemPolys
                 .entrySet()
                 .stream()
-                .sorted(Comparator.comparing(item -> item.getKey().getTranslationKey()))
+                .sorted(Comparator.comparing(item -> item.getKey().getDescriptionId()))
                 .forEach(entry -> {
                     var item = entry.getKey();
                     var poly = entry.getValue();
-                    addDebugProviderToDump(builder, item, item.getTranslationKey(), poly);
+                    addDebugProviderToDump(builder, item, item.getDescriptionId(), poly);
         });
 
         writeHeader(builder, "BLOCKS");
         this.blockPolys
                 .entrySet()
                 .stream()
-                .sorted(Comparator.comparing(block -> block.getKey().getTranslationKey()))
+                .sorted(Comparator.comparing(block -> block.getKey().getDescriptionId()))
                 .forEach(entry -> {
                     var block = entry.getKey();
                     var poly = entry.getValue();
-                    addDebugProviderToDump(builder, block, block.getTranslationKey(), poly);
+                    addDebugProviderToDump(builder, block, block.getDescriptionId(), poly);
         });
 
         writeHeader(builder, "ENTITIES");
         this.entityPolys
                 .entrySet()
                 .stream()
-                .sorted(Comparator.comparing(block -> block.getKey().getTranslationKey()))
+                .sorted(Comparator.comparing(block -> block.getKey().getDescriptionId()))
                 .forEach(entry -> {
                     var entity = entry.getKey();
                     var poly = entry.getValue();
-                    addDebugProviderToDump(builder, entity, entity.getTranslationKey(), poly);
+                    addDebugProviderToDump(builder, entity, entity.getDescriptionId(), poly);
                 });
 
         this.sharedValueResources.stream()

@@ -18,16 +18,16 @@
 package io.github.theepicblock.polymc.mixins.block.implementations.dontforceintcontrol;
 
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.block.BlockState;
-import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
+import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 import xyz.nucleoid.packettweaker.PacketContext;
 
-@Mixin(ChunkDeltaUpdateS2CPacket.class)
+@Mixin(ClientboundSectionBlocksUpdatePacket.class)
 public class ChunkDeltaUpdateImplementation {
-    @ModifyArg(method = "write", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/Block;getRawIdFromState(Lnet/minecraft/block/BlockState;)I"))
+    @ModifyArg(method = "write", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/Block;getId(Lnet/minecraft/world/level/block/state/BlockState;)I"))
     public BlockState getRawIdFromStateRedirect(BlockState state) {
         var ctx = PacketContext.get();
         var polymap = Util.tryGetPolyMap(ctx.getClientConnection());

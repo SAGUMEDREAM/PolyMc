@@ -5,11 +5,11 @@ import io.github.theepicblock.polymc.api.SharedValuesKey;
 import io.github.theepicblock.polymc.common.BlockItemType;
 import io.github.theepicblock.polymc.common.BlockItemTypeExamples;
 import io.netty.buffer.Unpooled;
-import net.minecraft.item.BlockItem;
-import net.minecraft.network.PacketByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.item.BlockItem;
 
 public class BlockItemInfo {
     public final static SharedValuesKey<BlockItemInfo> KEY = new SharedValuesKey<>(registry -> new BlockItemInfo(), null);
@@ -18,7 +18,7 @@ public class BlockItemInfo {
         try (var exampleFile = PolyMc.class.getResourceAsStream("/block-item-examples")) {
             if (exampleFile != null) {
                 var blob = exampleFile.readAllBytes();
-                var buf = new PacketByteBuf(Unpooled.wrappedBuffer(blob));
+                var buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(blob));
                 examples = new BlockItemTypeExamples(buf);
             } else {
                 PolyMc.LOGGER.warn("PolyMc was built without including block item info");

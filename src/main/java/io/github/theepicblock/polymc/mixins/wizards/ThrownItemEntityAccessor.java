@@ -1,15 +1,15 @@
 package io.github.theepicblock.polymc.mixins.wizards;
 
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(ThrownItemEntity.class)
+@Mixin(ThrowableItemProjectile.class)
 public interface ThrownItemEntityAccessor {
-    @Accessor("ITEM")
-    static TrackedData<ItemStack> polymc$getTrackedItem() {
+    @Accessor("DATA_ITEM_STACK")
+    static EntityDataAccessor<ItemStack> polymc$getTrackedItem() {
         throw new IllegalStateException();
     }
 }

@@ -1,21 +1,21 @@
 package io.github.theepicblock.polymc.mixins.entity;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.server.network.EntityTrackerEntry;
-import net.minecraft.server.network.PlayerAssociatedNetworkHandler;
-import net.minecraft.server.world.ServerChunkLoadingManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import java.util.Set;
+import net.minecraft.server.level.ChunkMap;
+import net.minecraft.server.level.ServerEntity;
+import net.minecraft.server.network.ServerPlayerConnection;
+import net.minecraft.world.entity.Entity;
 
-@Mixin(ServerChunkLoadingManager.EntityTracker.class)
+@Mixin(ChunkMap.TrackedEntity.class)
 public interface EntityTrackerAccessor {
     @Accessor
-    EntityTrackerEntry getEntry();
+    ServerEntity getServerEntity();
 
     @Accessor
-    Set<PlayerAssociatedNetworkHandler> getListeners();
+    Set<ServerPlayerConnection> getSeenBy();
 
     @Accessor
     Entity getEntity();

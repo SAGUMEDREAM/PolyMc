@@ -26,19 +26,16 @@ import io.github.theepicblock.polymc.api.resource.json.JModelOverride;
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
 import io.github.theepicblock.polymc.impl.resource.ResourceConstants;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.CustomModelDataComponent;
-import net.minecraft.component.type.UseCooldownComponent;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Pair;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.TreeMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.UseCooldown;
 
 /**
  * The most standard ItemPoly implementation
@@ -58,32 +55,32 @@ public class SimpleItemPoly implements ItemPoly {
     /**
      * Adds PolyMc specific tags to the item to display correctly on the client.
      * These shouldn't change depending on the stack as this method will be cached.
-     * For un-cached tags, use {@link #getClientItem(ItemStack, ServerPlayerEntity, ItemLocation)}
+     * For un-cached tags, use {@link #getClientItem(ItemStack, ServerPlayer, ItemLocation)}
      */
     protected void addCustomTagsToItem(ItemStack stack) {}
 
     @SuppressWarnings("ConstantConditions")
     @Override
-    public ItemStack getClientItem(ItemStack input, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location) {
+    public ItemStack getClientItem(ItemStack input, @Nullable ServerPlayer player, @Nullable ItemLocation location) {
         var output = Util.copyWithItem(input, clientItem, player);
 
         {
-            var current = input.get(DataComponentTypes.USE_COOLDOWN);
+            var current = input.get(DataComponents.USE_COOLDOWN);
             if (current == null) {
-                output.set(DataComponentTypes.USE_COOLDOWN, new UseCooldownComponent(0.00001f, Optional.of(Registries.ITEM.getId(input.getItem()))));
+                output.set(DataComponents.USE_COOLDOWN, new UseCooldown(0.00001f, Optional.of(BuiltInRegistries.ITEM.getKey(input.getItem()))));
             } else if (current.cooldownGroup().isEmpty()) {
-                output.set(DataComponentTypes.USE_COOLDOWN, new UseCooldownComponent(current.seconds(), Optional.of(Registries.ITEM.getId(input.getItem()))));
+                output.set(DataComponents.USE_COOLDOWN, new UseCooldown(current.seconds(), Optional.of(BuiltInRegistries.ITEM.getKey(input.getItem()))));
             }
         }
 
         this.addCustomTagsToItem(output);
-        output.set(DataComponentTypes.ITEM_NAME, input.getItem().getName(input));
+        output.set(DataComponents.ITEM_NAME, input.getItem().getName(input));
 
         return output;
     }
 
     @Override
     public String getDebugInfo(Item item) {
-        return "item:" + clientItem.getTranslationKey();
+        return "item:" + clientItem.getDescriptionId();
     }
 }

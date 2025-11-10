@@ -1,16 +1,15 @@
 package io.github.theepicblock.polymc.api.resource;
 
 import com.google.gson.Gson;
-import net.minecraft.resource.InputSupplier;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import net.minecraft.server.packs.resources.IoSupplier;
 
 public class SimpleAsset implements PolyMcAsset {
-    private final InputSupplier<InputStream> inner;
+    private final IoSupplier<InputStream> inner;
 
-    public SimpleAsset(InputSupplier<InputStream> inner) {
+    public SimpleAsset(IoSupplier<InputStream> inner) {
         this.inner = inner;
     }
 

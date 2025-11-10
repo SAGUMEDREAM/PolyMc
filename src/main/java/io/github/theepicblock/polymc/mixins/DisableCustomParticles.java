@@ -2,28 +2,25 @@ package io.github.theepicblock.polymc.mixins;
 
 import io.github.theepicblock.polymc.impl.Util;
 import io.netty.channel.ChannelFutureListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.PacketCallbacks;
-import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.network.PlayerAssociatedNetworkHandler;
-import net.minecraft.server.network.ServerCommonNetworkHandler;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
+import net.minecraft.server.network.ServerPlayerConnection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ServerCommonNetworkHandler.class)
+@Mixin(ServerCommonPacketListenerImpl.class)
 public class DisableCustomParticles {
-    @Inject(method = "send", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V", at = @At("HEAD"), cancellable = true)
     private void sendPacketInject(Packet<?> packet, ChannelFutureListener channelFutureListener, CallbackInfo ci) {
-        if (this instanceof PlayerAssociatedNetworkHandler player
-                && packet instanceof ParticleS2CPacket particlePacket && Util.isPolyMapVanillaLike(player.getPlayer())) {
-            var effect = particlePacket.getParameters();
-            if (!Util.isVanilla(Registries.PARTICLE_TYPE.getId(effect.getType()))) {
+        if (this instanceof ServerPlayerConnection player
+                && packet instanceof ClientboundLevelParticlesPacket particlePacket && Util.isPolyMapVanillaLike(player.getPlayer())) {
+            var effect = particlePacket.getParticle();
+            if (!Util.isVanilla(BuiltInRegistries.PARTICLE_TYPE.getKey(effect.getType()))) {
                 ci.cancel();
             }
         }

@@ -18,21 +18,20 @@
 package io.github.theepicblock.polymc.mixins;
 
 import io.github.theepicblock.polymc.PolyMc;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(Registries.class)
+@Mixin(BuiltInRegistries.class)
 public abstract class ServerStartMixin {
     /**
      * Hook for when the world is generating.
      * This is the point at which we should make the PolyMap. Since all the registries should be filled at this point
      */
-    @Inject(method = "freezeRegistries", at = @At("TAIL"))
+    @Inject(method = "freeze", at = @At("TAIL"))
     private static void freeze(CallbackInfo ci) {
         PolyMc.onRegistryClosed();
     }

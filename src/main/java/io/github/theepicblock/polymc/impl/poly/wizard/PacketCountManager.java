@@ -6,13 +6,13 @@ import io.github.theepicblock.polymc.api.wizard.PacketConsumer;
 import io.github.theepicblock.polymc.impl.ConfigManager;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
-import net.minecraft.server.network.PlayerAssociatedNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerPlayerConnection;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.*;
@@ -28,7 +28,7 @@ public class PacketCountManager {
     public final static int MAX_PACKETS = ConfigManager.getConfig().maxPacketsPerSecond/20;
     public final static int MIN_PACKETS = MAX_PACKETS - 5; // The minimum amount of packets before we start relaxing our restrictions
     public final static int MAX_RESTRICTION = 11;
-    private final Map<ServerPlayerEntity, PlayerInfo> playerTrackers = new HashMap<>();
+    private final Map<ServerPlayer, PlayerInfo> playerTrackers = new HashMap<>();
     /**
      * This provides an index into {@link PlayerInfo#packetCountHistory} into which we are currently reading.
      * This will be increased in every call of {@link #adjust(int)}
@@ -40,18 +40,18 @@ public class PacketCountManager {
 
     public static void registerEvents() {
         ServerEntityEvents.ENTITY_LOAD.register((entity, world) -> {
-            if (entity instanceof ServerPlayerEntity player) INSTANCE.onPlayerLoad(player);
+            if (entity instanceof ServerPlayer player) INSTANCE.onPlayerLoad(player);
         });
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
-            if (entity instanceof ServerPlayerEntity player) INSTANCE.onPlayerUnload(player);
+            if (entity instanceof ServerPlayer player) INSTANCE.onPlayerUnload(player);
         });
     }
 
-    private void onPlayerLoad(ServerPlayerEntity player) {
+    private void onPlayerLoad(ServerPlayer player) {
         playerTrackers.put(player, new PlayerInfo());
     }
 
-    private void onPlayerUnload(ServerPlayerEntity player) {
+    private void onPlayerUnload(ServerPlayer player) {
         playerTrackers.remove(player);
     }
 
@@ -85,7 +85,7 @@ public class PacketCountManager {
         return (watchDistance+3)*16;
     }
 
-    public PacketConsumer getView(Set<PlayerAssociatedNetworkHandler> listeners, PolyMap map, Vec3d pos, int tick, int seed) {
+    public PacketConsumer getView(Set<ServerPlayerConnection> listeners, PolyMap map, Vec3 pos, int tick, int seed) {
         var reusableConsumer = this.reusableConsumer.get();
         reusableConsumer.reset(this.cursor);
 
@@ -96,7 +96,7 @@ public class PacketCountManager {
                 var info = playerTrackers.get(player);
                 // The player might've been unloaded, despite still being a listener for this entity
                 if (info == null) continue;
-                if (info.shouldSend(player.getPos(), pos, true, tick, seed+(pSeed++), this.watchRadius)) {
+                if (info.shouldSend(player.position(), pos, true, tick, seed+(pSeed++), this.watchRadius)) {
                     reusableConsumer.addListener(listener, info);
                 }
             }
@@ -105,21 +105,21 @@ public class PacketCountManager {
         return reusableConsumer;
     }
 
-    public PacketConsumer getView(ServerWorld world, ChunkPos pos, PolyMap map, int tick, int seed) {
+    public PacketConsumer getView(ServerLevel world, ChunkPos pos, PolyMap map, int tick, int seed) {
         var reusableConsumer = this.reusableConsumer.get();
         reusableConsumer.reset(this.cursor);
-        var chunkPos = new Vec3d(pos.getCenterX(), 0, pos.getCenterZ());
+        var chunkPos = new Vec3(pos.getMiddleBlockX(), 0, pos.getMiddleBlockZ());
 
         int pSeed = 0;
         for (var player : PlayerLookup.world(world)) {
 
-            if (player.getChunkFilter().isWithinDistance(pos) &&
+            if (player.getChunkTrackingView().contains(pos) &&
                     PolyMapProvider.getPolyMap(player) == map) {
                 var info = playerTrackers.get(player);
                 // Just in case the player was unloaded but not yet removed from the world
                 if (info == null) continue;
-                if (info.shouldSend(player.getPos(), chunkPos, false, tick, seed+(pSeed++), this.watchRadius)) {
-                    reusableConsumer.addListener(player.networkHandler, info);
+                if (info.shouldSend(player.position(), chunkPos, false, tick, seed+(pSeed++), this.watchRadius)) {
+                    reusableConsumer.addListener(player.connection, info);
                 }
             }
         }
@@ -127,7 +127,7 @@ public class PacketCountManager {
         return reusableConsumer;
     }
 
-    public PlayerInfo getTrackerInfoForPlayer(ServerPlayerEntity player) {
+    public PlayerInfo getTrackerInfoForPlayer(ServerPlayer player) {
         return playerTrackers.get(player);
     }
 
@@ -178,14 +178,14 @@ public class PacketCountManager {
         /**
          * This is the main method that controls the restricting of packets
          */
-        protected boolean shouldSend(Vec3d playerPos, Vec3d wizardPos, boolean isChunk, int tickCount, int seed, int watchRadius) {
+        protected boolean shouldSend(Vec3 playerPos, Vec3 wizardPos, boolean isChunk, int tickCount, int seed, int watchRadius) {
             if (restrictionLevel == 0) {
                 return true;
             }
 
             double distance;
             if (isChunk) {
-                distance = playerPos.squaredDistanceTo(wizardPos);
+                distance = playerPos.distanceToSqr(wizardPos);
             } else {
                 var xDiff = Math.abs(playerPos.x-wizardPos.x);
                 var zDiff = Math.abs(playerPos.z-wizardPos.z);
@@ -267,7 +267,7 @@ public class PacketCountManager {
     }
 
     public static class TrackingPacketConsumer implements PacketConsumer {
-        private final ArrayList<PlayerAssociatedNetworkHandler> listeners = new ArrayList<>();
+        private final ArrayList<ServerPlayerConnection> listeners = new ArrayList<>();
         private final ArrayList<PlayerInfo> trackers = new ArrayList<>();
         private int cursor = 0;
 
@@ -277,7 +277,7 @@ public class PacketCountManager {
             trackers.clear();
         }
 
-        public void addListener(PlayerAssociatedNetworkHandler listener, PlayerInfo tracker) {
+        public void addListener(ServerPlayerConnection listener, PlayerInfo tracker) {
             this.listeners.add(listener);
             this.trackers.add(tracker);
         }
@@ -285,14 +285,14 @@ public class PacketCountManager {
         @Override
         public void sendPacket(Packet<?> packet) {
             for (int i = 0; i < listeners.size(); i++) {
-                listeners.get(i).sendPacket(packet);
+                listeners.get(i).send(packet);
                 trackers.get(i).packetCountHistory[cursor] += 1;
             }
         }
 
         @Override
         public void sendDeathPacket(int id) {
-            this.sendPacket(new EntitiesDestroyS2CPacket(id));
+            this.sendPacket(new ClientboundRemoveEntitiesPacket(id));
         }
 
         @Override

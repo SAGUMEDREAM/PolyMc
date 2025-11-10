@@ -20,15 +20,15 @@ package io.github.theepicblock.polymc.mixins.block;
 import io.github.theepicblock.polymc.impl.misc.BlockBreakingUtil;
 import io.github.theepicblock.polymc.impl.mixin.BlockBreakingDuck;
 import io.github.theepicblock.polymc.impl.mixin.CustomBlockBreakingCheck;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.s2c.play.BlockBreakingProgressS2CPacket;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.network.ServerPlayerInteractionManager;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerPlayerGameMode;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.block.state.BlockState;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -43,13 +43,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * Vanilla-like clients usually process block breaking client-side.
  * These mixins give vanilla-like clients mining fatigue and reimplement the block breaking server-side.
  */
-@Mixin(ServerPlayerInteractionManager.class)
+@Mixin(ServerPlayerGameMode.class)
 public abstract class BlockBreakingPatch implements BlockBreakingDuck {
-    @Shadow @Final protected ServerPlayerEntity player;
-    @Shadow private int tickCounter;
-    @Shadow private int startMiningTime;
-    @Shadow protected ServerWorld world;
-    @Shadow private int blockBreakingProgress;
+    @Shadow @Final protected ServerPlayer player;
+    @Shadow private int gameTicks;
+    @Shadow private int destroyProgressStart;
+    @Shadow protected ServerLevel level;
+    @Shadow private int lastSentState;
 
     @Unique
     private int blockBreakingCooldown;
@@ -57,16 +57,16 @@ public abstract class BlockBreakingPatch implements BlockBreakingDuck {
     private boolean isBreakingServerside = false;
 
     @Shadow
-    public abstract void finishMining(BlockPos pos, int sequence, String reason);
+    public abstract void destroyAndAck(BlockPos pos, int sequence, String reason);
 
     /**
      * This breaks the block serverside if the client hasn't broken it already
      */
-    @Inject(method = "continueMining", at = @At("TAIL"))
+    @Inject(method = "incrementDestroyProgress", at = @At("TAIL"))
     public void breakIfTakingTooLong(BlockState state, BlockPos pos, int i, CallbackInfoReturnable<Float> cir) {
         if (CustomBlockBreakingCheck.needsCustomBreaking(player, state)) {
-            int j = tickCounter - i;
-            float f = state.calcBlockBreakingDelta(this.player, this.player.getWorld(), pos) * (float)(j);
+            int j = gameTicks - i;
+            float f = state.getDestroyProgress(this.player, this.player.level(), pos) * (float)(j);
 
             if (blockBreakingCooldown > 0) {
                 --blockBreakingCooldown;
@@ -74,49 +74,49 @@ public abstract class BlockBreakingPatch implements BlockBreakingDuck {
 
             if (f >= 1.0F) {
                 blockBreakingCooldown = 5;
-                player.networkHandler.sendPacket(new BlockBreakingProgressS2CPacket(-1, pos, -1));
-                finishMining(pos, 0, "destroyed");
+                player.connection.send(new ClientboundBlockDestructionPacket(-1, pos, -1));
+                destroyAndAck(pos, 0, "destroyed");
             }
         }
     }
 
-    @Inject(method = "continueMining", at = @At(value = "FIELD", opcode = Opcodes.GETFIELD, shift = At.Shift.AFTER, target = "Lnet/minecraft/server/network/ServerPlayerInteractionManager;blockBreakingProgress:I"))
+    @Inject(method = "incrementDestroyProgress", at = @At(value = "FIELD", opcode = Opcodes.GETFIELD, shift = At.Shift.AFTER, target = "Lnet/minecraft/server/level/ServerPlayerGameMode;lastSentState:I"))
     public void onUpdateBreakStatus(BlockState state, BlockPos pos, int i, CallbackInfoReturnable<Float> cir) {
         if (CustomBlockBreakingCheck.needsCustomBreaking(player, state)) {
             //Send a packet that resembles the current mining progress
-            player.networkHandler.sendPacket(new BlockBreakingProgressS2CPacket(-1, pos, this.blockBreakingProgress));
+            player.connection.send(new ClientboundBlockDestructionPacket(-1, pos, this.lastSentState));
         }
     }
 
-    @Inject(method = "processBlockBreakingAction", at = @At("HEAD"))
-    public void packetReceivedInject(BlockPos pos, PlayerActionC2SPacket.Action action, Direction direction, int worldHeight, int sequence, CallbackInfo ci) {
-        if (CustomBlockBreakingCheck.needsCustomBreaking(player, world.getBlockState(pos))) {
-            if (action == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK) {
+    @Inject(method = "handleBlockBreakAction", at = @At("HEAD"))
+    public void packetReceivedInject(BlockPos pos, ServerboundPlayerActionPacket.Action action, Direction direction, int worldHeight, int sequence, CallbackInfo ci) {
+        if (CustomBlockBreakingCheck.needsCustomBreaking(player, level.getBlockState(pos))) {
+            if (action == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
                 // This prevents the client from trying to break the block themselves.
-                if (this.world.getBlockState(pos).calcBlockBreakingDelta(this.player, this.player.getWorld(), pos) < 1) {
+                if (this.level.getBlockState(pos).getDestroyProgress(this.player, this.player.level(), pos) < 1) {
                     disableClientBreaking();
                 }
-            } else if (action == PlayerActionC2SPacket.Action.ABORT_DESTROY_BLOCK) {
+            } else if (action == ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK) {
                 enableClientBreaking();
-                player.networkHandler.sendPacket(new BlockBreakingProgressS2CPacket(-1, pos, -1));
+                player.connection.send(new ClientboundBlockDestructionPacket(-1, pos, -1));
             }
         } else if (isBreakingServerside) {
             enableClientBreaking();
         }
     }
 
-    @Inject(method = "processBlockBreakingAction", at = @At("TAIL"))
-    public void enforceBlockBreakingCooldown(BlockPos pos, PlayerActionC2SPacket.Action action, Direction direction, int worldHeight, int sequence, CallbackInfo ci) {
-        if (CustomBlockBreakingCheck.needsCustomBreaking(player, world.getBlockState(pos))) {
-            if (action == PlayerActionC2SPacket.Action.START_DESTROY_BLOCK) {
-                this.startMiningTime += blockBreakingCooldown;
+    @Inject(method = "handleBlockBreakAction", at = @At("TAIL"))
+    public void enforceBlockBreakingCooldown(BlockPos pos, ServerboundPlayerActionPacket.Action action, Direction direction, int worldHeight, int sequence, CallbackInfo ci) {
+        if (CustomBlockBreakingCheck.needsCustomBreaking(player, level.getBlockState(pos))) {
+            if (action == ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK) {
+                this.destroyProgressStart += blockBreakingCooldown;
             }
         } else if (isBreakingServerside) {
             enableClientBreaking();
         }
     }
 
-    @Inject(method = "finishMining", at = @At("HEAD"))
+    @Inject(method = "destroyAndAck", at = @At("HEAD"))
     private void clearEffects(BlockPos pos, int sequence, String reason, CallbackInfo ci) {
         if (isBreakingServerside) {
             enableClientBreaking();
@@ -127,7 +127,7 @@ public abstract class BlockBreakingPatch implements BlockBreakingDuck {
     private void disableClientBreaking() {
         isBreakingServerside = true;
         // Make sure it's resynced
-        this.player.getAttributes().getTracked().add(this.player.getAttributeInstance(EntityAttributes.BLOCK_BREAK_SPEED));
+        this.player.getAttributes().getAttributesToSync().add(this.player.getAttribute(Attributes.BLOCK_BREAK_SPEED));
     }
 
     @Unique

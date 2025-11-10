@@ -2,11 +2,10 @@ package io.github.theepicblock.polymc.impl.mixin;
 
 import io.github.theepicblock.polymc.api.PolyMap;
 import io.github.theepicblock.polymc.api.wizard.Wizard;
-import net.minecraft.util.math.ChunkPos;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import net.minecraft.world.level.ChunkPos;
 
 public interface WizardTickerDuck {
     void polymc$addBlockTicker(PolyMap polyMap, ChunkPos pos, Wizard wizard);

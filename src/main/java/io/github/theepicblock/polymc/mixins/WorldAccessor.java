@@ -1,69 +1,68 @@
 package io.github.theepicblock.polymc.mixins;
 
-import net.minecraft.entity.damage.DamageSources;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.profiler.Profiler;
-import net.minecraft.world.MutableWorldProperties;
-import net.minecraft.world.World;
-import net.minecraft.world.biome.source.BiomeAccess;
-import net.minecraft.world.border.WorldBorder;
-import net.minecraft.world.chunk.BlockEntityTickInvoker;
-import net.minecraft.world.dimension.DimensionType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import java.util.List;
 import java.util.function.Supplier;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.damagesource.DamageSources;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.block.entity.TickingBlockEntity;
+import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.dimension.DimensionType;
+import net.minecraft.world.level.storage.WritableLevelData;
 
-@Mixin(World.class)
+@Mixin(Level.class)
 public interface WorldAccessor {
     @Mutable
     @Accessor("thread")
     void polymc$setThread(Thread thread);
 
     @Mutable
-    @Accessor("debugWorld")
+    @Accessor("isDebug")
     void polymc$setDebugWorld(boolean debugWorld);
 
     @Mutable
-    @Accessor("properties")
-    void polymc$setProperties(MutableWorldProperties properties);
+    @Accessor("levelData")
+    void polymc$setProperties(WritableLevelData properties);
 
 
-    @Mutable
-    @Accessor("border")
-    void polymc$setBorder(WorldBorder border);
-
-    @Mutable
-    @Accessor("biomeAccess")
-    void polymc$setBiomeAccess(BiomeAccess biomeAccess);
+//    @Mutable
+//    @Accessor("worldBorder")
+//    void polymc$setBorder(WorldBorder border);
 
     @Mutable
-    @Accessor("registryKey")
-    void polymc$setRegistryKey(RegistryKey<World> registryKey);
+    @Accessor("biomeManager")
+    void polymc$setBiomeAccess(BiomeManager biomeAccess);
 
     @Mutable
-    @Accessor("dimensionEntry")
-    void polymc$setDimensionEntry(RegistryEntry<DimensionType> dimensionEntry);
+    @Accessor("dimension")
+    void polymc$setRegistryKey(ResourceKey<Level> registryKey);
+
+    @Mutable
+    @Accessor("dimensionTypeRegistration")
+    void polymc$setDimensionEntry(Holder<DimensionType> dimensionEntry);
 
     @Mutable
     @Accessor("random")
-    void polymc$setRandom(Random random);
+    void polymc$setRandom(RandomSource random);
 
     @Mutable
     @Accessor("threadSafeRandom")
-    void polymc$setAsyncRandom(Random random);
+    void polymc$setAsyncRandom(RandomSource random);
 
     @Mutable
     @Accessor("blockEntityTickers")
-    void polymc$setBlockEntityTickers(List<BlockEntityTickInvoker> list);
+    void polymc$setBlockEntityTickers(List<TickingBlockEntity> list);
 
     @Mutable
     @Accessor("pendingBlockEntityTickers")
-    void polymc$setPendingBlockEntityTickers(List<BlockEntityTickInvoker> list);
+    void polymc$setPendingBlockEntityTickers(List<TickingBlockEntity> list);
 
 
     @Mutable

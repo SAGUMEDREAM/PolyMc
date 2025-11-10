@@ -20,9 +20,9 @@ package io.github.theepicblock.polymc.mixins.item;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import io.github.theepicblock.polymc.api.item.ItemLocation;
 import io.github.theepicblock.polymc.api.misc.PolyMapProvider;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -32,14 +32,14 @@ import org.spongepowered.asm.mixin.injection.At;
  * This means that if the client thinks it's holding a stick, it will instruct the server to set the slot to a stick.
  * Even if the stick is supposed to represent another item. To fix this, we store the original full itemstack inside
  * the polyd itemstack and restore it when we receive the packet.
- * @see io.github.theepicblock.polymc.impl.PolyMapImpl#getClientItem(ItemStack, ServerPlayerEntity, ItemLocation)
+ * @see io.github.theepicblock.polymc.impl.PolyMapImpl#getClientItem(ItemStack, ServerPlayer, ItemLocation)
  * @see io.github.theepicblock.polymc.api.PolyMap#reverseClientItem(ItemStack)
  */
-@Mixin(ServerPlayNetworkHandler.class)
+@Mixin(ServerGamePacketListenerImpl.class)
 public class CreativeItemStackFix {
-    @Shadow public ServerPlayerEntity player;
+    @Shadow public ServerPlayer player;
 
-    @ModifyExpressionValue(method = "onCreativeInventoryAction(Lnet/minecraft/network/packet/c2s/play/CreativeInventoryActionC2SPacket;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/packet/c2s/play/CreativeInventoryActionC2SPacket;stack()Lnet/minecraft/item/ItemStack;"))
+    @ModifyExpressionValue(method = "handleSetCreativeModeSlot(Lnet/minecraft/network/protocol/game/ServerboundSetCreativeModeSlotPacket;)V", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/protocol/game/ServerboundSetCreativeModeSlotPacket;itemStack()Lnet/minecraft/world/item/ItemStack;"))
     private ItemStack creativemodeSetSlotRedirect(ItemStack original) {
         return PolyMapProvider.getPolyMap(player).reverseClientItem(original, player);
     }

@@ -17,28 +17,27 @@
  */
 package io.github.theepicblock.polymc.impl.poly.gui;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.server.network.ServerPlayerEntity;
-
 import java.util.List;
 import java.util.stream.Collectors;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 
 public class GuiUtils {
     public static List<Slot> removePlayerSlots(List<Slot> base) {
         return base.stream().filter(
-                (slot) -> !(slot.inventory instanceof PlayerInventory)
+                (slot) -> !(slot.container instanceof Inventory)
         ).collect(Collectors.toList());
     }
 
-    public static void resyncPlayerInventory(PlayerEntity player) {
-        if (player instanceof ServerPlayerEntity) {
-            resyncPlayerInventory((ServerPlayerEntity)player);
+    public static void resyncPlayerInventory(Player player) {
+        if (player instanceof ServerPlayer) {
+            resyncPlayerInventory((ServerPlayer)player);
         }
     }
 
-    public static void resyncPlayerInventory(ServerPlayerEntity player) {
-        player.currentScreenHandler.syncState();
+    public static void resyncPlayerInventory(ServerPlayer player) {
+        player.containerMenu.sendAllDataToRemote();
     }
 }

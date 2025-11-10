@@ -3,8 +3,6 @@ package io.github.theepicblock.polymc.mixins.compat;
 import com.mojang.authlib.minecraft.client.MinecraftClient;
 import io.github.theepicblock.polymc.api.misc.PolyMapProvider;
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.server.network.ServerPlayerEntity;
 //import org.quiltmc.qsl.registry.impl.sync.server.ServerRegistrySync;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

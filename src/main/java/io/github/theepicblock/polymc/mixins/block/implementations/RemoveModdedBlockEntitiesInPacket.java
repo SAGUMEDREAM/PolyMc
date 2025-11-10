@@ -19,22 +19,21 @@ package io.github.theepicblock.polymc.mixins.block.implementations;
 
 import io.github.theepicblock.polymc.impl.Util;
 import io.netty.channel.ChannelFutureListener;
-import net.minecraft.network.PacketCallbacks;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.server.network.ServerCommonNetworkHandler;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ServerCommonNetworkHandler.class)
+@Mixin(ServerCommonPacketListenerImpl.class)
 public class RemoveModdedBlockEntitiesInPacket {
 
-    @Inject(method = "send", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;)V", at = @At("HEAD"), cancellable = true)
     public void sendPacketInject(Packet<?> packet, ChannelFutureListener channelFutureListener, CallbackInfo ci) {
-        var polymap = Util.tryGetPolyMap((ServerCommonNetworkHandler) (Object) this, false);
-        if (packet instanceof BlockEntityUpdateS2CPacket packet1 && !polymap.canReceiveBlockEntity(packet1.getBlockEntityType())) {
+        var polymap = Util.tryGetPolyMap((ServerCommonPacketListenerImpl) (Object) this, false);
+        if (packet instanceof ClientboundBlockEntityDataPacket packet1 && !polymap.canReceiveBlockEntity(packet1.getType())) {
             ci.cancel();
         }
     }

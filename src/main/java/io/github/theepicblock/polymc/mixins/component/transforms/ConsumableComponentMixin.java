@@ -2,13 +2,6 @@ package io.github.theepicblock.polymc.mixins.component.transforms;
 
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.mixin.TransformingComponent;
-import net.minecraft.component.type.ConsumableComponent;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.consume.ConsumeEffect;
-import net.minecraft.item.consume.UseAction;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.sound.SoundEvent;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -16,18 +9,23 @@ import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.util.List;
 import java.util.Optional;
+import net.minecraft.core.Holder;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.item.component.Consumable;
+import net.minecraft.world.item.consume_effects.ConsumeEffect;
 
-@Mixin(ConsumableComponent.class)
+@Mixin(Consumable.class)
 public abstract class ConsumableComponentMixin implements TransformingComponent {
     @Shadow @Final private float consumeSeconds;
 
-    @Shadow @Final private RegistryEntry<SoundEvent> sound;
+    @Shadow @Final private Holder<SoundEvent> sound;
 
     @Shadow @Final private boolean hasConsumeParticles;
 
     @Shadow @Final private List<ConsumeEffect> onConsumeEffects;
 
-    @Shadow @Final private UseAction useAction;
+    @Shadow @Final private ItemUseAnimation animation;
 
     @Override
     public Object polymc$getTransformed(PacketContext player) {
@@ -35,7 +33,7 @@ public abstract class ConsumableComponentMixin implements TransformingComponent 
             return this;
         }
 
-        return new ConsumableComponent(this.consumeSeconds, this.useAction, this.sound, this.hasConsumeParticles, List.of());
+        return new Consumable(this.consumeSeconds, this.animation, this.sound, this.hasConsumeParticles, List.of());
     }
 
     @Override

@@ -1,7 +1,7 @@
 package io.github.theepicblock.polymc.mixins.item.recipe;
 
 import io.github.theepicblock.polymc.impl.misc.SkipCheck;
-import net.minecraft.recipe.display.SlotDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplay;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 

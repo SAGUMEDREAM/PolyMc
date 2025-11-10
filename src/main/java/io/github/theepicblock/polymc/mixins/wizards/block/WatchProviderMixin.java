@@ -1,29 +1,29 @@
 package io.github.theepicblock.polymc.mixins.wizards.block;
 
 import io.github.theepicblock.polymc.impl.misc.WatchListener;
-import net.minecraft.server.network.ChunkDataSender;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.PlayerChunkSender;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ChunkDataSender.class)
+@Mixin(PlayerChunkSender.class)
 public abstract class WatchProviderMixin {
-    @Inject(method = "sendChunkData",
+    @Inject(method = "sendChunk",
             at = @At("HEAD"))
-    private static void onSendChunkData(ServerPlayNetworkHandler handler, ServerWorld world, WorldChunk chunk, CallbackInfo ci) {
+    private static void onSendChunkData(ServerGamePacketListenerImpl handler, ServerLevel world, LevelChunk chunk, CallbackInfo ci) {
         ((WatchListener)chunk).polymc$addPlayer(handler.player);
     }
 
-    @Inject(method = "unload",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;sendPacket(Lnet/minecraft/network/packet/Packet;)V"))
-    private void onSendUnloadPacket(ServerPlayerEntity player, ChunkPos pos, CallbackInfo ci) {
-        var chunk = player.getWorld().getChunkManager().getChunk(pos.x, pos.z);
+    @Inject(method = "dropChunk",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;send(Lnet/minecraft/network/protocol/Packet;)V"))
+    private void onSendUnloadPacket(ServerPlayer player, ChunkPos pos, CallbackInfo ci) {
+        var chunk = player.level().getChunkSource().getChunkForLighting(pos.x, pos.z);
         if (!(chunk instanceof WatchListener)) return;
 
         ((WatchListener)chunk).polymc$removePlayer(player);

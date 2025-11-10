@@ -27,29 +27,28 @@ import io.github.theepicblock.polymc.api.misc.PolyMapProvider;
 import io.github.theepicblock.polymc.impl.mixin.BlockStateDuck;
 import io.github.theepicblock.polymc.impl.mixin.TransformingComponent;
 import net.fabricmc.fabric.api.entity.FakePlayer;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.component.ComponentMap;
-import net.minecraft.component.ComponentType;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.component.DataComponentMap;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.server.network.ServerCommonNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.network.Connection;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import xyz.nucleoid.packettweaker.PacketContext;
@@ -76,19 +75,19 @@ public class Util {
             return ((BlockStateDuck)state).polymc$getVanilla();
         }
 
-        return Util.isVanilla(Registries.BLOCK.getId(state.getBlock()));
+        return Util.isVanilla(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
     }
 
     /**
      * Returns true if this identifier is in the minecraft namespace
      */
-    public static boolean isVanilla(Identifier id) {
+    public static boolean isVanilla(ResourceLocation id) {
         if (id == null) return false;
         return isNamespaceVanilla(id.getNamespace());
     }
 
-    public static boolean isVanillaAndRegistered(RegistryEntry<?> v) {
-        return v.getKey().isPresent() && Util.isVanilla(v.getKey().get().getValue());
+    public static boolean isVanillaAndRegistered(Holder<?> v) {
+        return v.unwrapKey().isPresent() && Util.isVanilla(v.unwrapKey().get().location());
     }
 
     /**
@@ -105,14 +104,14 @@ public class Util {
      * @return the blockstate
      */
     public static BlockState getBlockStateFromString(Block block, String string) {
-        BlockState v = block.getDefaultState();
+        BlockState v = block.defaultBlockState();
         for (String property : string.split(",")) {
             String[] t = property.split("=");
             if (t.length != 2) continue;
             String key = t[0];
             String value = t[1];
 
-            Property<?> prop = block.getStateManager().getProperty(key);
+            Property<?> prop = block.getStateDefinition().getProperty(key);
             if (prop != null) {
                 v = parseAndAddBlockState(v, prop, value);
             }
@@ -121,9 +120,9 @@ public class Util {
     }
 
     public static <T extends Comparable<T>> BlockState parseAndAddBlockState(BlockState v, Property<T> property, String value) {
-        Optional<T> optional = property.parse(value);
+        Optional<T> optional = property.getValue(value);
         if (optional.isPresent()) {
-            return v.with(property, optional.get());
+            return v.setValue(property, optional.get());
         }
         return v;
     }
@@ -141,7 +140,7 @@ public class Util {
      * @return "facing=north,lit=false" for example
      */
     public static String getPropertiesFromBlockState(BlockState state) {
-        return getPropertiesFromEntries(state.getEntries());
+        return getPropertiesFromEntries(state.getValues());
     }
 
     public static String getPropertiesFromEntries(Map<Property<?>,Comparable<?>> entries) {
@@ -163,7 +162,7 @@ public class Util {
 
     @SuppressWarnings("unchecked")
     private static <T extends Comparable<T>> String nameValue(Property<T> property, Comparable<?> value) {
-        return property.name((T)value);
+        return property.getName((T)value);
     }
 
     /**
@@ -211,14 +210,14 @@ public class Util {
         if (a.isEmpty() || b.isEmpty()) {
             return false;
         }
-        return a.getBoundingBox().equals(b.getBoundingBox());
+        return a.bounds().equals(b.bounds());
     }
 
     public static PolyMap tryGetPolyMap(PacketContext context) {
         return tryGetPolyMap(context.getClientConnection());
     }
 
-    public static PolyMap tryGetPolyMap(@Nullable ServerPlayerEntity player) {
+    public static PolyMap tryGetPolyMap(@Nullable ServerPlayer player) {
         if (player == null) {
             if (!HAS_LOGGED_POLYMAP_ERROR) {
                 PolyMc.LOGGER.error("Tried to get polymap but there's no player context. PolyMc will use the default PolyMap. If PolyMc is transforming things it shouldn't, this is why. Further errors of this kind will be silenced. Have a thread dump: ");
@@ -235,10 +234,10 @@ public class Util {
     }
 
     @NotNull
-    public static PolyMap tryGetPolyMap(@Nullable ServerCommonNetworkHandler handler) {
+    public static PolyMap tryGetPolyMap(@Nullable ServerCommonPacketListenerImpl handler) {
         return tryGetPolyMap(handler, true);
     }
-    public static PolyMap tryGetPolyMap(@Nullable ServerCommonNetworkHandler handler, boolean logWarning) {
+    public static PolyMap tryGetPolyMap(@Nullable ServerCommonPacketListenerImpl handler, boolean logWarning) {
         var map = handler == null ? null : PolyMapProvider.getPolyMap(handler);
         if (map == null) {
             if (!HAS_LOGGED_POLYMAP_ERROR && logWarning) {
@@ -252,7 +251,7 @@ public class Util {
     }
 
     @NotNull
-    public static PolyMap tryGetPolyMap(@Nullable ClientConnection handler) {
+    public static PolyMap tryGetPolyMap(@Nullable Connection handler) {
         var map = handler == null ? null : PolyMapProvider.getPolyMap(handler);
         if (map == null) {
             if (!HAS_LOGGED_POLYMAP_ERROR) {
@@ -267,13 +266,13 @@ public class Util {
 
     /**
      * Utility method to get the polyd raw id.
-     * PolyMc also redirects {@link Block#getRawIdFromState(BlockState)} but that doesn't respect the player's {@link PolyMap}.
+     * PolyMc also redirects {@link Block#getId(BlockState)} but that doesn't respect the player's {@link PolyMap}.
      * This method does.
      * @param state        the BlockState who's raw id is being queried
      * @param playerEntity the player who's {@link PolyMap} we should be using
      * @return the int associated with the state after being transformed by the players {@link PolyMap}
      */
-    public static int getPolydRawIdFromState(BlockState state, ServerPlayerEntity playerEntity) {
+    public static int getPolydRawIdFromState(BlockState state, ServerPlayer playerEntity) {
         PolyMap map = Util.tryGetPolyMap(playerEntity);
         return map.getClientStateRawId(state, playerEntity);
     }
@@ -289,15 +288,15 @@ public class Util {
      * @return true if the client is vanilla-like, false otherwise
      * @see PolyMap#isVanillaLikeMap()
      */
-    public static boolean isPolyMapVanillaLike(ServerPlayerEntity client) {
+    public static boolean isPolyMapVanillaLike(ServerPlayer client) {
         return tryGetPolyMap(client).isVanillaLikeMap();
     }
 
-    public static boolean isPolyMapVanillaLike(ServerCommonNetworkHandler client) {
+    public static boolean isPolyMapVanillaLike(ServerCommonPacketListenerImpl client) {
         return tryGetPolyMap(client).isVanillaLikeMap();
     }
 
-    public static boolean isPolyMapVanillaLike(ClientConnection client) {
+    public static boolean isPolyMapVanillaLike(Connection client) {
         return tryGetPolyMap(client).isVanillaLikeMap();
     }
 
@@ -308,9 +307,9 @@ public class Util {
     /**
      * @return null if the id can't be parsed or the string is null
      */
-    public static Identifier parseId(String id) {
+    public static ResourceLocation parseId(String id) {
         if (id == null) return null;
-        return Identifier.tryParse(id);
+        return ResourceLocation.tryParse(id);
     }
 
     public static void writeJsonToStream(OutputStream stream, Gson gson, Object json) throws IOException {
@@ -322,27 +321,27 @@ public class Util {
     /**
      * Returns a copy of the provided {@link ItemStack}, but with the item set to the target item.
      */
-    public static ItemStack copyWithItem(ItemStack original, Item target, @Nullable ServerPlayerEntity player) {
+    public static ItemStack copyWithItem(ItemStack original, Item target, @Nullable ServerPlayer player) {
         var out = new ItemStack(target, original.getCount());
-        for (var x : original.getComponents().getTypes()) {
+        for (var x : original.getComponents().keySet()) {
             if (original.getComponents().get(x) == null) {
                 out.set(x, null);
             }
         }
         var ctx = player == null ? PacketContext.get() : PacketContext.of(player);
 
-        for (ComponentType<?> type : COMPONENTS_TO_COPY) {
+        for (DataComponentType<?> type : COMPONENTS_TO_COPY) {
             var x = original.get(type);
 
             if (x instanceof TransformingComponent t) {
                 //noinspection unchecked,rawtypes
-                out.set((ComponentType)type, t.polymc$getTransformed(ctx));
+                out.set((DataComponentType)type, t.polymc$getTransformed(ctx));
             } else {
                 //noinspection unchecked,rawtypes
-                out.set((ComponentType)type, (Object)original.get(type));
+                out.set((DataComponentType)type, (Object)original.get(type));
             }
         }
-        out.set(DataComponentTypes.ENCHANTMENT_GLINT_OVERRIDE, original.hasGlint());
+        out.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, original.hasFoil());
 
         return out;
     }
@@ -351,20 +350,20 @@ public class Util {
      * Get the appropriate dynamic registry manager
      */
     @NotNull
-    public static RegistryWrapper.WrapperLookup getRegistryManager(PlayerEntity entity) {
+    public static HolderLookup.Provider getRegistryManager(Player entity) {
         if (entity == null) {
             return getRegistryManager();
         }
 
-        return entity.getRegistryManager();
+        return entity.registryAccess();
     }
 
     /**
      * Get the appropriate dynamic registry manager. Please use
-     * {@link #getRegistryManager(PlayerEntity)} unless it's really not possible.
+     * {@link #getRegistryManager(Player)} unless it's really not possible.
      */
     @NotNull
-    public static RegistryWrapper.WrapperLookup getRegistryManager() {
+    public static HolderLookup.Provider getRegistryManager() {
         var ctx = PacketContext.get();
         if (ctx.getRegistryWrapperLookup() != null) {
             return ctx.getRegistryWrapperLookup();
@@ -375,63 +374,63 @@ public class Util {
         }
 
         // Fallback to an empty registry
-        return DynamicRegistryManager.EMPTY;
+        return RegistryAccess.EMPTY;
     }
 
-    private static final ComponentType<?>[] COMPONENTS_TO_COPY = {
-            DataComponentTypes.ITEM_MODEL,
-            DataComponentTypes.ITEM_NAME,
-            DataComponentTypes.CAN_BREAK,
-            DataComponentTypes.CAN_PLACE_ON,
-            DataComponentTypes.BLOCK_ENTITY_DATA,
-            DataComponentTypes.TRIM,
-            DataComponentTypes.TOOL,
-            DataComponentTypes.LORE,
-            DataComponentTypes.MAX_STACK_SIZE,
-            DataComponentTypes.MAP_ID,
-            DataComponentTypes.MAP_COLOR,
-            DataComponentTypes.MAP_DECORATIONS,
-            DataComponentTypes.MAP_POST_PROCESSING,
-            DataComponentTypes.FOOD,
-            DataComponentTypes.DAMAGE_RESISTANT,
-            DataComponentTypes.FIREWORKS,
-            DataComponentTypes.FIREWORK_EXPLOSION,
-            DataComponentTypes.DAMAGE,
-            DataComponentTypes.MAX_DAMAGE,
-            DataComponentTypes.ATTRIBUTE_MODIFIERS,
-            DataComponentTypes.BANNER_PATTERNS,
-            DataComponentTypes.BASE_COLOR,
-            DataComponentTypes.CAN_BREAK,
-            DataComponentTypes.CAN_PLACE_ON,
-            DataComponentTypes.REPAIR_COST,
-            DataComponentTypes.BUNDLE_CONTENTS,
-            DataComponentTypes.TOOLTIP_STYLE,
-            DataComponentTypes.RARITY,
-            DataComponentTypes.LODESTONE_TRACKER,
-            DataComponentTypes.ENCHANTMENTS,
-            DataComponentTypes.STORED_ENCHANTMENTS,
-            DataComponentTypes.POTION_CONTENTS,
-            DataComponentTypes.CUSTOM_NAME,
-            DataComponentTypes.JUKEBOX_PLAYABLE,
-            DataComponentTypes.WRITABLE_BOOK_CONTENT,
-            DataComponentTypes.WRITTEN_BOOK_CONTENT,
-            DataComponentTypes.CONTAINER,
-            DataComponentTypes.ENCHANTABLE,
-            DataComponentTypes.USE_COOLDOWN,
-            DataComponentTypes.CONSUMABLE,
-            DataComponentTypes.EQUIPPABLE,
-            DataComponentTypes.GLIDER,
-            DataComponentTypes.CUSTOM_MODEL_DATA,
-            DataComponentTypes.DYED_COLOR,
-            DataComponentTypes.TOOLTIP_DISPLAY,
-            DataComponentTypes.REPAIRABLE
+    private static final DataComponentType<?>[] COMPONENTS_TO_COPY = {
+            DataComponents.ITEM_MODEL,
+            DataComponents.ITEM_NAME,
+            DataComponents.CAN_BREAK,
+            DataComponents.CAN_PLACE_ON,
+            DataComponents.BLOCK_ENTITY_DATA,
+            DataComponents.TRIM,
+            DataComponents.TOOL,
+            DataComponents.LORE,
+            DataComponents.MAX_STACK_SIZE,
+            DataComponents.MAP_ID,
+            DataComponents.MAP_COLOR,
+            DataComponents.MAP_DECORATIONS,
+            DataComponents.MAP_POST_PROCESSING,
+            DataComponents.FOOD,
+            DataComponents.DAMAGE_RESISTANT,
+            DataComponents.FIREWORKS,
+            DataComponents.FIREWORK_EXPLOSION,
+            DataComponents.DAMAGE,
+            DataComponents.MAX_DAMAGE,
+            DataComponents.ATTRIBUTE_MODIFIERS,
+            DataComponents.BANNER_PATTERNS,
+            DataComponents.BASE_COLOR,
+            DataComponents.CAN_BREAK,
+            DataComponents.CAN_PLACE_ON,
+            DataComponents.REPAIR_COST,
+            DataComponents.BUNDLE_CONTENTS,
+            DataComponents.TOOLTIP_STYLE,
+            DataComponents.RARITY,
+            DataComponents.LODESTONE_TRACKER,
+            DataComponents.ENCHANTMENTS,
+            DataComponents.STORED_ENCHANTMENTS,
+            DataComponents.POTION_CONTENTS,
+            DataComponents.CUSTOM_NAME,
+            DataComponents.JUKEBOX_PLAYABLE,
+            DataComponents.WRITABLE_BOOK_CONTENT,
+            DataComponents.WRITTEN_BOOK_CONTENT,
+            DataComponents.CONTAINER,
+            DataComponents.ENCHANTABLE,
+            DataComponents.USE_COOLDOWN,
+            DataComponents.CONSUMABLE,
+            DataComponents.EQUIPPABLE,
+            DataComponents.GLIDER,
+            DataComponents.CUSTOM_MODEL_DATA,
+            DataComponents.DYED_COLOR,
+            DataComponents.TOOLTIP_DISPLAY,
+            DataComponents.REPAIRABLE
     };
 
-    public static NbtCompound transformBlockEntityNbt(PacketContext context, BlockEntityType<?> type, NbtCompound original) {
+    public static CompoundTag transformBlockEntityNbt(PacketContext context, BlockEntityType<?> type, CompoundTag original) {
         if (original.isEmpty()) {
             return original;
         }
-        NbtCompound override = null;
+        CompoundTag override = null;
 
         var lookup = context.getRegistryWrapperLookup() != null ? context.getRegistryWrapperLookup() : null;
         if (lookup == null) {
@@ -439,7 +438,7 @@ public class Util {
         }
         var polymap = tryGetPolyMap(context.getClientConnection());
 
-        var ops = lookup.getOps(NbtOps.INSTANCE);
+        var ops = lookup.createSerializationContext(NbtOps.INSTANCE);
 
 
         if (original.contains("Items")) {
@@ -476,25 +475,25 @@ public class Util {
         }
 
         if (original.contains("components")) {
-            var comp = ComponentMap.CODEC.decode(ops, original.getCompoundOrEmpty("components"));
+            var comp = DataComponentMap.CODEC.decode(ops, original.getCompoundOrEmpty("components"));
             if (comp.isSuccess()) {
                 var map = comp.getOrThrow().getFirst();
-                ComponentMap.Builder builder = null;
+                DataComponentMap.Builder builder = null;
 
                 for (var component : map) {
                     if (component.value() instanceof TransformingComponent transformingComponent && transformingComponent.polymc$requireModification(context)) {
                         if (builder == null) {
-                            builder = ComponentMap.builder();
+                            builder = DataComponentMap.builder();
                             builder.addAll(map);
                         }
                         //noinspection unchecked
-                        builder.add((ComponentType<? super Object>) component.type(), transformingComponent.polymc$getTransformed(context));
+                        builder.set((DataComponentType<? super Object>) component.type(), transformingComponent.polymc$getTransformed(context));
                     } else if (polymap.canReceiveDataComponentType(component.type())) {
                         if (builder == null) {
-                            builder = ComponentMap.builder();
+                            builder = DataComponentMap.builder();
                             builder.addAll(map);
                         }
-                        builder.add(component.type(), null);
+                        builder.set(component.type(), null);
                     }
                 }
 
@@ -502,7 +501,7 @@ public class Util {
                     if (override == null) {
                         override = original.copy();
                     }
-                    override.put("components", ComponentMap.CODEC.encodeStart(ops, builder.build()).result().orElse(new NbtCompound()));
+                    override.put("components", DataComponentMap.CODEC.encodeStart(ops, builder.build()).result().orElse(new CompoundTag()));
                 }
             }
         }
@@ -511,7 +510,7 @@ public class Util {
     }
 
     @Nullable
-    public static PacketContext getContext(ServerPlayerEntity player) {
+    public static PacketContext getContext(ServerPlayer player) {
         return player == null ? PacketContext.get() : PacketContext.of(player);
     }
 }

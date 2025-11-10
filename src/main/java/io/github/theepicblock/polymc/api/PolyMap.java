@@ -33,40 +33,39 @@ import io.github.theepicblock.polymc.mixins.gui.GuiPolyImplementation;
 import io.github.theepicblock.polymc.mixins.item.CreativeItemStackFix;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.component.ComponentType;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.effect.EnchantmentEntityEffect;
-import net.minecraft.enchantment.effect.EnchantmentLocationBasedEffect;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.attribute.EntityAttribute;
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.fluid.Fluid;
-import net.minecraft.fluid.Fluids;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.consume.ConsumeEffect;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.potion.Potion;
-import net.minecraft.potion.Potions;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.server.network.ServerCommonNetworkHandler;
-import net.minecraft.server.network.ServerConfigurationNetworkHandler;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.particles.ParticleType;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerCommonPacketListenerImpl;
+import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.world.item.alchemy.Potions;
+import net.minecraft.world.item.consume_effects.ConsumeEffect;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.effects.EnchantmentEntityEffect;
+import net.minecraft.world.item.enchantment.effects.EnchantmentLocationBasedEffect;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 import xyz.nucleoid.packettweaker.PacketContext;
@@ -75,12 +74,12 @@ public interface PolyMap {
     /**
      * Converts the serverside representation of an item into a clientside one that should be sent to the client.
      */
-    ItemStack getClientItem(ItemStack serverItem, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location);
+    ItemStack getClientItem(ItemStack serverItem, @Nullable ServerPlayer player, @Nullable ItemLocation location);
 
     /**
      * Converts the serverside representation of a block into a clientside one that should be sent to the client.
      */
-    default BlockState getClientState(BlockState serverBlock, @Nullable ServerPlayerEntity player) {
+    default BlockState getClientState(BlockState serverBlock, @Nullable ServerPlayer player) {
         BlockPoly poly = this.getBlockPoly(serverBlock.getBlock());
         if (poly == null) return serverBlock;
 
@@ -91,14 +90,14 @@ public interface PolyMap {
      * Get the raw id of the clientside blockstate.
      */
     @ApiStatus.Internal
-    default int getClientStateRawId(BlockState state, ServerPlayerEntity playerEntity) {
+    default int getClientStateRawId(BlockState state, ServerPlayer playerEntity) {
         BlockState clientState = this.getClientState(state, playerEntity);
 
         if (clientState == null) {
-            clientState = Blocks.STONE.getDefaultState();
+            clientState = Blocks.STONE.defaultBlockState();
         }
 
-        return Block.STATE_IDS.getRawId(clientState);
+        return Block.BLOCK_STATE_REGISTRY.getId(clientState);
     }
 
     /**
@@ -112,9 +111,9 @@ public interface PolyMap {
     BlockPoly getBlockPoly(Block block);
 
     /**
-     * @return the {@link GuiPoly} that this PolyMap associates with this {@link ScreenHandlerType}.
+     * @return the {@link GuiPoly} that this PolyMap associates with this {@link MenuType}.
      */
-    GuiPoly getGuiPoly(ScreenHandlerType<?> serverGuiType);
+    GuiPoly getGuiPoly(MenuType<?> serverGuiType);
 
     /**
      * @return the {@link EntityPoly} that this PolyMap associates with this {@link EntityType}.
@@ -123,18 +122,18 @@ public interface PolyMap {
 
     /**
      * Reverts the clientside item into the serverside representation.
-     * This should be the reverse of {@link #getClientItem(ItemStack, ServerPlayerEntity, ItemLocation)}.
+     * This should be the reverse of {@link #getClientItem(ItemStack, ServerPlayer, ItemLocation)}.
      * For optimization reasons, this method only needs to be implemented for items gained by players in creative mode.
      * @see CreativeItemStackFix
      */
-    ItemStack reverseClientItem(ItemStack clientItem, @Nullable ServerPlayerEntity player);
+    ItemStack reverseClientItem(ItemStack clientItem, @Nullable ServerPlayer player);
 
     /**
      * Specifies if this map is meant for vanilla-like clients
      * This is used to disable/enable miscellaneous patches
      * @see io.github.theepicblock.polymc.mixins.CustomPacketDisabler
      * @see io.github.theepicblock.polymc.mixins.block.ResyncImplementation
-     * @see io.github.theepicblock.polymc.impl.mixin.CustomBlockBreakingCheck#needsCustomBreaking(ServerPlayerEntity, BlockState)
+     * @see io.github.theepicblock.polymc.impl.mixin.CustomBlockBreakingCheck#needsCustomBreaking(ServerPlayer, BlockState)
      * @see GuiPolyImplementation
      */
     boolean isVanillaLikeMap();
@@ -154,59 +153,59 @@ public interface PolyMap {
      * Used for filtering out registry entries unsupported by client.
      * @see EntityAttributesFilteringMixin
      */
-    default <T> boolean canReceiveRegistryEntry(Registry<T> registry, RegistryEntry<T> entry) {
+    default <T> boolean canReceiveRegistryEntry(Registry<T> registry, Holder<T> entry) {
         return Util.isVanillaAndRegistered(entry) || RegistrySyncUtils.isServerEntry(registry, entry.value());
     }
 
     default <T> boolean canReceiveEntry(Registry<T> registry, T entry) {
-        return Util.isVanilla(registry.getId(entry)) || RegistrySyncUtils.isServerEntry(registry, entry);
+        return Util.isVanilla(registry.getKey(entry)) || RegistrySyncUtils.isServerEntry(registry, entry);
     }
 
     default boolean canReceiveBlockEntity(BlockEntityType<?> e) {
-        return Util.isVanilla(Registries.BLOCK_ENTITY_TYPE.getId(e));
+        return Util.isVanilla(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(e));
     }
 
-    default boolean canReceiveStatusEffect(RegistryEntry<StatusEffect> entry) {
+    default boolean canReceiveStatusEffect(Holder<MobEffect> entry) {
         return Util.isVanillaAndRegistered(entry);
     }
 
-    default boolean canReceiveEnchantment(RegistryEntry<Enchantment> entry) {
+    default boolean canReceiveEnchantment(Holder<Enchantment> entry) {
         return Util.isVanillaAndRegistered(entry);
     }
 
-    default boolean canReceivePotion(RegistryEntry<Potion> entry) {
+    default boolean canReceivePotion(Holder<Potion> entry) {
         return Util.isVanillaAndRegistered(entry);
     }
 
-    default boolean canReceiveDataComponentType(ComponentType<?> type) {
-        return Util.isVanilla(Registries.DATA_COMPONENT_TYPE.getId(type));
+    default boolean canReceiveDataComponentType(DataComponentType<?> type) {
+        return Util.isVanilla(BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type));
     }
 
-    default boolean canReceiveEnchantmentComponentType(ComponentType<?> type) {
-        return Util.isVanilla(Registries.ENCHANTMENT_EFFECT_COMPONENT_TYPE.getId(type));
+    default boolean canReceiveEnchantmentComponentType(DataComponentType<?> type) {
+        return Util.isVanilla(BuiltInRegistries.ENCHANTMENT_EFFECT_COMPONENT_TYPE.getKey(type));
     }
 
-    default boolean canReceiveCustomPayload(ServerCommonNetworkHandler handler, CustomPayload.Id<? extends CustomPayload> id) {
+    default boolean canReceiveCustomPayload(ServerCommonPacketListenerImpl handler, CustomPacketPayload.Type<? extends CustomPacketPayload> id) {
         return Util.isVanilla(id.id())
-                || (handler instanceof ServerPlayNetworkHandler play && ServerPlayNetworking.canSend(play, id))
-                || (handler instanceof ServerConfigurationNetworkHandler config && ServerConfigurationNetworking.canSend(config, id))
+                || (handler instanceof ServerGamePacketListenerImpl play && ServerPlayNetworking.canSend(play, id))
+                || (handler instanceof ServerConfigurationPacketListenerImpl config && ServerConfigurationNetworking.canSend(config, id))
                 || ConfigManager.getConfig().allowedPackets.contains(id.id().getNamespace());
     }
 
-    default boolean canReceiveComponentType(ComponentType<?> key) {
+    default boolean canReceiveComponentType(DataComponentType<?> key) {
         return canReceiveDataComponentType(key) || canReceiveEnchantmentComponentType(key);
     };
 
     default boolean canReceiveEnchantmentLocationBasedEffect(EnchantmentLocationBasedEffect effect) {
-        return Util.isVanilla(Registries.ENCHANTMENT_LOCATION_BASED_EFFECT_TYPE.getId(effect.getCodec()));
+        return Util.isVanilla(BuiltInRegistries.ENCHANTMENT_LOCATION_BASED_EFFECT_TYPE.getKey(effect.codec()));
     }
 
     default boolean canReceiveEnchantmentEntityEffect(EnchantmentEntityEffect effect) {
-        return Util.isVanilla(Registries.ENCHANTMENT_ENTITY_EFFECT_TYPE.getId(effect.getCodec()));
+        return Util.isVanilla(BuiltInRegistries.ENCHANTMENT_ENTITY_EFFECT_TYPE.getKey(effect.codec()));
     }
 
     default boolean canReceiveConsumeEffect(ConsumeEffect.Type<? extends ConsumeEffect> type) {
-        return Util.isVanilla(Registries.CONSUME_EFFECT_TYPE.getId(type));
+        return Util.isVanilla(BuiltInRegistries.CONSUME_EFFECT_TYPE.getKey(type));
     };
 
     default Object tryRemapping(Object val, PacketContext player) {
@@ -218,19 +217,19 @@ public interface PolyMap {
         } else if (val instanceof Block entry) {
             var poly = this.getBlockPoly(entry);
             if (poly != null) {
-                return poly.getClientBlock(entry.getDefaultState()).getBlock();
+                return poly.getClientBlock(entry.defaultBlockState()).getBlock();
             }
-        } else if (val instanceof SoundEvent entry && !this.canReceiveEntry(Registries.SOUND_EVENT, entry)) {
-            return SoundEvents.INTENTIONALLY_EMPTY;
-        } else if (val instanceof Fluid entry && !this.canReceiveEntry(Registries.FLUID, entry)) {
+        } else if (val instanceof SoundEvent entry && !this.canReceiveEntry(BuiltInRegistries.SOUND_EVENT, entry)) {
+            return SoundEvents.EMPTY;
+        } else if (val instanceof Fluid entry && !this.canReceiveEntry(BuiltInRegistries.FLUID, entry)) {
             return Fluids.EMPTY;
-        } else if (val instanceof StatusEffect entry && !this.canReceiveStatusEffect(Registries.STATUS_EFFECT.getEntry(entry))) {
-            return StatusEffects.LUCK.value();
-        } else if (val instanceof EntityType<?> entry && !this.canReceiveEntry(Registries.ENTITY_TYPE, entry)) {
+        } else if (val instanceof MobEffect entry && !this.canReceiveStatusEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(entry))) {
+            return MobEffects.LUCK.value();
+        } else if (val instanceof EntityType<?> entry && !this.canReceiveEntry(BuiltInRegistries.ENTITY_TYPE, entry)) {
             return EntityType.ITEM_DISPLAY;
-        } else if (val instanceof Potion entry && !this.canReceiveEntry(Registries.POTION, entry)) {
+        } else if (val instanceof Potion entry && !this.canReceiveEntry(BuiltInRegistries.POTION, entry)) {
             return Potions.LUCK.value();
-        } else if (val instanceof ParticleType<?> entry && !this.canReceiveEntry(Registries.PARTICLE_TYPE, entry)) {
+        } else if (val instanceof ParticleType<?> entry && !this.canReceiveEntry(BuiltInRegistries.PARTICLE_TYPE, entry)) {
             return ParticleTypes.SMOKE;
         }
 

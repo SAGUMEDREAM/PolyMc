@@ -23,9 +23,8 @@ import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.poly.item.Tooltip2LoreTransformer;
 import io.github.theepicblock.polymc.impl.poly.item.InvalidComponentFixGlobalPoly;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import java.util.Comparator;
 import java.util.function.BiConsumer;
 
@@ -35,10 +34,10 @@ public class Generator {
      * @param builder builder to add polys to
      */
     public static void generateMissing(PolyRegistry builder) {
-        generateMissingPolys(builder, Registries.BLOCK, BlockPolyGenerator::addBlockToBuilder, builder::hasBlockPoly);
-        generateMissingPolys(builder, Registries.ITEM, ItemPolyGenerator::addItemToBuilder, builder::hasItemPoly);
-        generateMissingPolys(builder, Registries.SCREEN_HANDLER, GuiGenerator::addGuiToBuilder, builder::hasGuiPoly);
-        generateMissingPolys(builder, Registries.ENTITY_TYPE, EntityPolyGenerator::addEntityToBuilder, builder::hasEntityPoly);
+        generateMissingPolys(builder, BuiltInRegistries.BLOCK, BlockPolyGenerator::addBlockToBuilder, builder::hasBlockPoly);
+        generateMissingPolys(builder, BuiltInRegistries.ITEM, ItemPolyGenerator::addItemToBuilder, builder::hasItemPoly);
+        generateMissingPolys(builder, BuiltInRegistries.MENU, GuiGenerator::addGuiToBuilder, builder::hasGuiPoly);
+        generateMissingPolys(builder, BuiltInRegistries.ENTITY_TYPE, EntityPolyGenerator::addEntityToBuilder, builder::hasEntityPoly);
 
         // Todo: Replace with more generic logic!
         if (FabricLoader.getInstance().isModLoaded("terraform-wood-api-v1")) {
@@ -51,11 +50,11 @@ public class Generator {
     }
 
     private static <T> void generateMissingPolys(PolyRegistry builder, Registry<T> registry, BiConsumer<T, PolyRegistry> generator, BooleanFunction<T> contains) {
-        registry.getEntrySet()
+        registry.entrySet()
                 .stream()
-                .filter(entry -> !Util.isVanilla(entry.getKey().getValue()))
+                .filter(entry -> !Util.isVanilla(entry.getKey().location()))
                 .filter(entry -> !contains.accept(entry.getValue()))
-                .sorted(Comparator.comparing(a -> a.getKey().getValue()))  // Compares the identifier
+                .sorted(Comparator.comparing(a -> a.getKey().location()))  // Compares the identifier
                 .forEach(entry -> generator.accept(entry.getValue(), builder));
     }
 

@@ -8,15 +8,14 @@ import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.misc.TransformingPacketCodec;
 import io.github.theepicblock.polymc.impl.mixin.RegistryEntryRegistry;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.collection.IndexedIterable;
+import net.minecraft.core.Holder;
+import net.minecraft.core.IdMap;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -24,10 +23,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 
-@Mixin(targets = "net/minecraft/network/codec/PacketCodecs", priority = 800)
+@Mixin(targets = "net/minecraft/network/codec/ByteBufCodecs", priority = 800)
 public interface PacketCodecsEntriesMixin {
-    @ModifyExpressionValue(method = "entryOf", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/codec/PacketCodecs;indexed(Ljava/util/function/IntFunction;Ljava/util/function/ToIntFunction;)Lnet/minecraft/network/codec/PacketCodec;"))
-    private static <T> PacketCodec<ByteBuf, T> polymer$changeData(PacketCodec<ByteBuf, T> original, @Local(argsOnly = true) IndexedIterable<T> iterable) {
+    @ModifyExpressionValue(method = "idMapper(Lnet/minecraft/core/IdMap;)Lnet/minecraft/network/codec/StreamCodec;", at = @At(value = "INVOKE", target = "Lnet/minecraft/network/codec/ByteBufCodecs;idMapper(Ljava/util/function/IntFunction;Ljava/util/function/ToIntFunction;)Lnet/minecraft/network/codec/StreamCodec;"))
+    private static <T> StreamCodec<ByteBuf, T> polymer$changeData(StreamCodec<ByteBuf, T> original, @Local(argsOnly = true) IdMap<T> iterable) {
         if (iterable instanceof Registry<T> registry) {
             return TransformingPacketCodec.encodeOnly(original, (byteBuf, val) -> {
                 var player = PacketContext.get();
@@ -44,9 +43,9 @@ public interface PacketCodecsEntriesMixin {
 
                 var map = Util.tryGetPolyMap(player);
 
-                return (T) registry.getEntry(map.tryRemapping(((RegistryEntry) val).value(), player));
+                return (T) registry.wrapAsHolder(map.tryRemapping(((Holder) val).value(), player));
             });
-        } else if (iterable == Block.STATE_IDS) {
+        } else if (iterable == Block.BLOCK_STATE_REGISTRY) {
             return TransformingPacketCodec.encodeOnly(original, (byteBuf, val) -> {
                 var player = PacketContext.get();
                 var map = Util.tryGetPolyMap(player);
@@ -63,17 +62,17 @@ public interface PacketCodecsEntriesMixin {
     private static String stringify(Object o) {
         var builder = new StringBuilder();
         var state = (BlockState) o;
-        builder.append(Registries.BLOCK.getId(state.getBlock()));
+        builder.append(BuiltInRegistries.BLOCK.getKey(state.getBlock()));
 
-        if (!state.getBlock().getStateManager().getProperties().isEmpty()) {
+        if (!state.getBlock().getStateDefinition().getProperties().isEmpty()) {
             builder.append("[");
-            var iterator = state.getBlock().getStateManager().getProperties().iterator();
+            var iterator = state.getBlock().getStateDefinition().getProperties().iterator();
 
             while (iterator.hasNext()) {
                 var property = iterator.next();
                 builder.append(property.getName());
                 builder.append("=");
-                builder.append(((Property) property).name(state.get(property)));
+                builder.append(((Property) property).getName(state.getValue(property)));
 
                 if (iterator.hasNext()) {
                     builder.append(",");

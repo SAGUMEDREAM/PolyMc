@@ -4,15 +4,13 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.serialization.Codec;
 import io.github.theepicblock.polymc.api.item.ItemLocation;
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.util.Objects;
 import java.util.function.Function;
+import net.minecraft.network.chat.HoverEvent;
 
 @Mixin(HoverEvent.class)
 public interface  HoverEventFixerMixin {

@@ -1,7 +1,7 @@
 package io.github.theepicblock.polymc.impl.poly.wizard;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.FallingBlockEntity;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 public class FallingBlockWizardInfo extends EntityWizardInfo {

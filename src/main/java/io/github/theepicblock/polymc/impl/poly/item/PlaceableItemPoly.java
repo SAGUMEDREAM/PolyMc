@@ -1,7 +1,7 @@
 package io.github.theepicblock.polymc.impl.poly.item;
 
 import io.github.theepicblock.polymc.api.item.CustomModelDataManager;
-import net.minecraft.item.Item;
+import net.minecraft.world.item.Item;
 
 /**
  * Polys extending this class are known to not make any placement sounds themselves, and will instead

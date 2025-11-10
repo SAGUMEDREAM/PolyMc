@@ -18,16 +18,16 @@
 package io.github.theepicblock.polymc.mixins.block.implementations.forceintcontrol;
 
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.block.BlockState;
-import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundSectionBlocksUpdatePacket;
+import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import xyz.nucleoid.packettweaker.PacketContext;
 
-@Mixin(ChunkDeltaUpdateS2CPacket.class)
+@Mixin(ClientboundSectionBlocksUpdatePacket.class)
 public class ChunkDeltaUpdateImplementation {
-    @Redirect(method = "write", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/Block;getRawIdFromState(Lnet/minecraft/block/BlockState;)I"))
+    @Redirect(method = "write", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/Block;getId(Lnet/minecraft/world/level/block/state/BlockState;)I"))
     public int getRawIdFromStateRedirect(BlockState state) {
         return Util.getPolydRawIdFromState(state, PacketContext.get());
     }

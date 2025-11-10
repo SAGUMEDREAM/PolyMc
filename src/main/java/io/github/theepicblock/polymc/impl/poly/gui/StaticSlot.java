@@ -17,9 +17,9 @@
  */
 package io.github.theepicblock.polymc.impl.poly.gui;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 public class StaticSlot extends Slot {
     public final ItemStack stack;
@@ -29,43 +29,43 @@ public class StaticSlot extends Slot {
         this.stack = stack;
     }
 
-    public void onQuickTransfer(ItemStack originalItem, ItemStack itemStack) {
+    public void onQuickCraft(ItemStack originalItem, ItemStack itemStack) {
         throw new AssertionError("PolyMc: the contents of a static, unchangeable slot were changed. Containing: " + stack.toString());
     }
 
-    public void onTakeItem(PlayerEntity player, ItemStack stack) {
+    public void onTake(Player player, ItemStack stack) {
         throw new AssertionError("PolyMc: tried to take item out of an static, unchangeable slot. Containing: " + stack.toString());
     }
 
-    public ItemStack takeStack(int amount) {
+    public ItemStack remove(int amount) {
         return ItemStack.EMPTY;
     }
 
-    public boolean canInsert(ItemStack stack) {
+    public boolean mayPlace(ItemStack stack) {
         return false;
     }
 
-    public boolean canTakeItems(PlayerEntity playerEntity) {
+    public boolean mayPickup(Player playerEntity) {
         GuiUtils.resyncPlayerInventory(playerEntity);
         return false;
     }
 
-    public ItemStack getStack() {
+    public ItemStack getItem() {
         return this.stack == null ? ItemStack.EMPTY : this.stack;
     }
 
     @Override
-    public void setStack(ItemStack stack) {
+    public void setByPlayer(ItemStack stack) {
     }
 
-    public void markDirty() {
+    public void setChanged() {
     }
 
-    public int getMaxItemCount() {
-        return this.getStack().getCount();
+    public int getMaxStackSize() {
+        return this.getItem().getCount();
     }
 
-    public int getMaxItemCount(ItemStack stack) {
-        return this.getMaxItemCount();
+    public int getMaxStackSize(ItemStack stack) {
+        return this.getMaxStackSize();
     }
 }

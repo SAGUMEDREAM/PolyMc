@@ -3,14 +3,14 @@ package io.github.theepicblock.polymc.mixins.block.implementations;
 import eu.pb4.polymer.common.api.PolymerCommonUtils;
 import io.github.theepicblock.polymc.api.PolyMap;
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.collection.PackedIntegerArray;
-import net.minecraft.util.collection.PaletteStorage;
-import net.minecraft.world.chunk.IdListPalette;
-import net.minecraft.world.chunk.PalettedContainer;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.BitStorage;
+import net.minecraft.util.SimpleBitStorage;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.GlobalPalette;
+import net.minecraft.world.level.chunk.PalettedContainer;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -20,11 +20,11 @@ import xyz.nucleoid.packettweaker.PacketContext;
 
 @Mixin(PalettedContainer.Data.class)
 public class IdListImplementation {
-    @Redirect(method = "writePacket", at = @At(value = "FIELD", opcode = Opcodes.GETFIELD, target = "Lnet/minecraft/world/chunk/PalettedContainer$Data;storage:Lnet/minecraft/util/collection/PaletteStorage;"))
-    private PaletteStorage getData(PalettedContainer.Data<?> container, PacketByteBuf buf)  {
+    @Redirect(method = "write", at = @At(value = "FIELD", opcode = Opcodes.GETFIELD, target = "Lnet/minecraft/world/level/chunk/PalettedContainer$Data;storage:Lnet/minecraft/util/BitStorage;"))
+    private BitStorage getData(PalettedContainer.Data<?> container, FriendlyByteBuf buf)  {
         var originalStorage = container.storage();
 
-        if (!(container.palette() instanceof IdListPalette<?>)) {
+        if (!(container.palette() instanceof GlobalPalette<?>)) {
             return originalStorage;
         }
 
@@ -36,14 +36,14 @@ public class IdListImplementation {
         }
 
         // Check if we're actually doing things with blocks
-        if (!(container.palette().get(0) instanceof BlockState)) {
+        if (!(container.palette().valueFor(0) instanceof BlockState)) {
             return originalStorage;
         }
 
-        var oldArray = originalStorage.getData();
+        var oldArray = originalStorage.getRaw();
         var newArray = new long[oldArray.length]; // SAFETY the size of the array mustn't change, otherwise we'd have to inject into getPacketSize as well
 
-        var elementBits = originalStorage.getElementBits(); // The amount of bits per element
+        var elementBits = originalStorage.getBits(); // The amount of bits per element
         var size = originalStorage.getSize();
         var elementsPerLong = (char)(64 / elementBits);
         var maxValue = (1L << elementBits) - 1L;
@@ -65,12 +65,12 @@ public class IdListImplementation {
             newArray[j] = newLong;
         }
 
-        return new PackedIntegerArray(elementBits, size, newArray);
+        return new SimpleBitStorage(elementBits, size, newArray);
     }
 
     @Unique
-    private long transform(long in, PolyMap map, ServerPlayerEntity playerEntity) {
-        var state = Block.getStateFromRawId((int)in);
+    private long transform(long in, PolyMap map, ServerPlayer playerEntity) {
+        var state = Block.stateById((int)in);
         return map.getClientStateRawId(state, playerEntity);
     }
 }

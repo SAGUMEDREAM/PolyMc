@@ -7,7 +7,7 @@ public enum ItemLocation {
     /**
      * Item is included inside of text. Namely, hover events might contain an item stack.
      * See "show_item" on <a href="https://minecraft.wiki/w/Raw_JSON_text_format">the minecraft wiki</a>
-     * @see net.minecraft.text.HoverEvent
+     * @see net.minecraft.network.chat.HoverEvent
      */
     TEXT,
     /**

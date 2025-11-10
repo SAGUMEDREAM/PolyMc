@@ -8,14 +8,14 @@ import io.github.theepicblock.polymc.impl.misc.WatchListener;
 import io.github.theepicblock.polymc.impl.poly.wizard.FallingBlockWizardInfo;
 import io.github.theepicblock.polymc.impl.poly.wizard.PolyMapFilteredPlayerView;
 import io.github.theepicblock.polymc.impl.poly.wizard.SinglePlayerView;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.FallingBlockEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -31,9 +31,9 @@ public abstract class FallingBlockEntityMixin extends Entity implements WatchLis
     @Shadow private BlockState blockState;
     @Unique
     private final PolyMapMap<Wizard> wizards = new PolyMapMap<Wizard>((map) -> {
-        World world = this.getWorld();
+        Level world = this.level();
 
-        if (!(world instanceof ServerWorld)) return null;
+        if (!(world instanceof ServerLevel)) return null;
 
         var block = this.blockState.getBlock();
         var poly = map.getBlockPoly(block);
@@ -41,19 +41,19 @@ public abstract class FallingBlockEntityMixin extends Entity implements WatchLis
             try {
                 return poly.createWizard(new FallingBlockWizardInfo((FallingBlockEntity)(Object)this));
             } catch (Throwable t) {
-                PolyMc.LOGGER.error("Failed to create block wizard for "+block.getTranslationKey()+" | "+poly);
+                PolyMc.LOGGER.error("Failed to create block wizard for "+block.getDescriptionId()+" | "+poly);
                 t.printStackTrace();
             }
         }
         return null;
     });
 
-    public FallingBlockEntityMixin(EntityType<?> type, World world) {
+    public FallingBlockEntityMixin(EntityType<?> type, Level world) {
         super(type, world);
     }
 
-    @Inject(method = "spawnFromBlock", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;setBlockState(Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;I)Z"), locals = LocalCapture.CAPTURE_FAILHARD)
-    private static void onSpawnFromBlock(World world, BlockPos pos, BlockState state, CallbackInfoReturnable<FallingBlockEntity> cir, FallingBlockEntity entity) {
+    @Inject(method = "fall", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Z"), locals = LocalCapture.CAPTURE_FAILHARD)
+    private static void onSpawnFromBlock(Level world, BlockPos pos, BlockState state, CallbackInfoReturnable<FallingBlockEntity> cir, FallingBlockEntity entity) {
         //When a falling block falls. The block is actually removed by the falling block entity on the first tick.
         PolyMapMap<Wizard> previousWizards = WizardView.removeWizards(world, pos, true);
         previousWizards.forEach((polyMap, wizard) -> {
@@ -64,8 +64,8 @@ public abstract class FallingBlockEntityMixin extends Entity implements WatchLis
 
     @Inject(method = "tick", at = @At("RETURN"))
     private void onTick(CallbackInfo ci) {
-        if (this.getWorld() instanceof ServerWorld world) {
-            var allNearbyPlayers = PolyMapFilteredPlayerView.getAll(world, this.getChunkPos());
+        if (this.level() instanceof ServerLevel world) {
+            var allNearbyPlayers = PolyMapFilteredPlayerView.getAll(world, this.chunkPosition());
             wizards.forEach(((polyMap, wizard) -> {
                 if (wizard == null) return;
                 var filteredView = new PolyMapFilteredPlayerView(allNearbyPlayers, polyMap);
@@ -77,13 +77,13 @@ public abstract class FallingBlockEntityMixin extends Entity implements WatchLis
     }
 
     @Override
-    public void onStartedTrackingBy(ServerPlayerEntity player) {
-        super.onStartedTrackingBy(player);
+    public void startSeenByPlayer(ServerPlayer player) {
+        super.startSeenByPlayer(player);
     }
 
     @Override
-    public void onStoppedTrackingBy(ServerPlayerEntity player) {
-        super.onStoppedTrackingBy(player);
+    public void stopSeenByPlayer(ServerPlayer player) {
+        super.stopSeenByPlayer(player);
     }
 
     @Override
@@ -91,18 +91,8 @@ public abstract class FallingBlockEntityMixin extends Entity implements WatchLis
         super.setRemoved(reason);
     }
 
-    @Inject(method = "onStartedTrackingBy(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("RETURN"))
-    private void onStartTracking(ServerPlayerEntity player, CallbackInfo ci) {
-        this.polymc$addPlayer(player);
-    }
-
-    @Inject(method = "onStoppedTrackingBy(Lnet/minecraft/server/network/ServerPlayerEntity;)V", at = @At("RETURN"))
-    private void onStopTracking(ServerPlayerEntity player, CallbackInfo ci) {
-        this.polymc$removePlayer(player);
-    }
-
     @Override
-    public void polymc$addPlayer(ServerPlayerEntity playerEntity) {
+    public void polymc$addPlayer(ServerPlayer playerEntity) {
         wizards.forEach(((polyMap, wizard) -> {
             if (wizard == null) return;
             var view = new SinglePlayerView(playerEntity);
@@ -112,7 +102,7 @@ public abstract class FallingBlockEntityMixin extends Entity implements WatchLis
     }
 
     @Override
-    public void polymc$removePlayer(ServerPlayerEntity playerEntity) {
+    public void polymc$removePlayer(ServerPlayer playerEntity) {
         wizards.forEach(((polyMap, wizard) -> {
             if (wizard == null) return;
             var view = new SinglePlayerView(playerEntity);
@@ -123,8 +113,8 @@ public abstract class FallingBlockEntityMixin extends Entity implements WatchLis
 
     @Override
     public void polymc$removeAllPlayers() {
-        if (this.getWorld() instanceof ServerWorld world) {
-            var allNearbyPlayers = PolyMapFilteredPlayerView.getAll(world, this.getChunkPos());
+        if (this.level() instanceof ServerLevel world) {
+            var allNearbyPlayers = PolyMapFilteredPlayerView.getAll(world, this.chunkPosition());
             wizards.forEach(((polyMap, wizard) -> {
                 var filteredView = new PolyMapFilteredPlayerView(allNearbyPlayers, polyMap);
                 if (wizard != null) wizard.removeAllPlayers(filteredView);

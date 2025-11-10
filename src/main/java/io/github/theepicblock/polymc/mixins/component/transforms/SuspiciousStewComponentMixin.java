@@ -2,18 +2,18 @@ package io.github.theepicblock.polymc.mixins.component.transforms;
 
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.mixin.TransformingComponent;
-import net.minecraft.component.type.SuspiciousStewEffectsComponent;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.util.List;
+import net.minecraft.world.item.component.SuspiciousStewEffects;
 
-@Mixin(SuspiciousStewEffectsComponent.class)
+@Mixin(SuspiciousStewEffects.class)
 public abstract class SuspiciousStewComponentMixin implements TransformingComponent {
 
-    @Shadow @Final private List<SuspiciousStewEffectsComponent.StewEffect> effects;
+    @Shadow @Final private List<SuspiciousStewEffects.Entry> effects;
 
     @Override
     public Object polymc$getTransformed(PacketContext player) {
@@ -21,7 +21,7 @@ public abstract class SuspiciousStewComponentMixin implements TransformingCompon
             return this;
         }
 
-        return new SuspiciousStewEffectsComponent(List.of());
+        return new SuspiciousStewEffects(List.of());
     }
 
     @Override

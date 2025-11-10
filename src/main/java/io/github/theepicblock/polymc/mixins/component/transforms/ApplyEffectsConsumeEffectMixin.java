@@ -2,18 +2,18 @@ package io.github.theepicblock.polymc.mixins.component.transforms;
 
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.mixin.TransformingComponent;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.item.consume.ApplyEffectsConsumeEffect;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import xyz.nucleoid.packettweaker.PacketContext;
 
 import java.util.List;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 
-@Mixin(ApplyEffectsConsumeEffect.class)
+@Mixin(ApplyStatusEffectsConsumeEffect.class)
 public abstract class ApplyEffectsConsumeEffectMixin implements TransformingComponent {
-    @Shadow @Final private List<StatusEffectInstance> effects;
+    @Shadow @Final private List<MobEffectInstance> effects;
 
     @Override
     public Object polymc$getTransformed(PacketContext context) {
@@ -21,14 +21,14 @@ public abstract class ApplyEffectsConsumeEffectMixin implements TransformingComp
             return this;
         }
 
-        return new ApplyEffectsConsumeEffect(List.of());
+        return new ApplyStatusEffectsConsumeEffect(List.of());
     }
 
     @Override
     public boolean polymc$requireModification(PacketContext context) {
         var map = Util.tryGetPolyMap(context);
         for (var effect : this.effects) {
-            if (!map.canReceiveStatusEffect(effect.getEffectType())) {
+            if (!map.canReceiveStatusEffect(effect.getEffect())) {
                 return true;
             }
         }

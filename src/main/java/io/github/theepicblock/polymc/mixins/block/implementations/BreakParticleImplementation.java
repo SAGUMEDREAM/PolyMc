@@ -19,12 +19,12 @@ package io.github.theepicblock.polymc.mixins.block.implementations;
 
 import io.github.theepicblock.polymc.impl.mixin.CustomBlockBreakingCheck;
 import io.github.theepicblock.polymc.impl.mixin.PacketReplacementUtil;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,12 +36,12 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin(Block.class)
 public class BreakParticleImplementation {
     /**
-     * Replaces the call to {@link World#syncWorldEvent(PlayerEntity, int, BlockPos, int)} with a call to {@link PacketReplacementUtil#syncWorldEvent(World, PlayerEntity, int, BlockPos, BlockState)}
+     * Replaces the call to {@link Level#levelEvent(Player, int, BlockPos, int)} with a call to {@link PacketReplacementUtil#syncWorldEvent(Level, Player, int, BlockPos, BlockState)}
      * to respect different PolyMaps
      */
-    @ModifyVariable(method = "spawnBreakParticles", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;syncWorldEvent(Lnet/minecraft/entity/Entity;ILnet/minecraft/util/math/BlockPos;I)V"), argsOnly = true)
-    public PlayerEntity onBreakParticlePacket(@Nullable PlayerEntity player, World world, @Nullable PlayerEntity player2, BlockPos pos, BlockState state) {
-        if (player instanceof ServerPlayerEntity spe) {
+    @ModifyVariable(method = "spawnDestroyParticles", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;levelEvent(Lnet/minecraft/world/entity/Entity;ILnet/minecraft/core/BlockPos;I)V"), argsOnly = true)
+    public Player onBreakParticlePacket(@Nullable Player player, Level world, @Nullable Player player2, BlockPos pos, BlockState state) {
+        if (player instanceof ServerPlayer spe) {
             var needsCustomBreaking = CustomBlockBreakingCheck.needsCustomBreaking(spe, state);
             return needsCustomBreaking ? null : player;
         }

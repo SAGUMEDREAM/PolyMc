@@ -17,9 +17,9 @@
  */
 package io.github.theepicblock.polymc.api.gui;
 
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 
 public interface GuiPoly {
-    ScreenHandler replaceScreenHandler(ScreenHandler base, ServerPlayerEntity player, int syncId);
+    AbstractContainerMenu replaceScreenHandler(AbstractContainerMenu base, ServerPlayer player, int syncId);
 }

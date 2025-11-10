@@ -21,11 +21,11 @@ import eu.pb4.polymer.common.api.PolymerCommonUtils;
 import io.github.theepicblock.polymc.api.PolyMap;
 import io.github.theepicblock.polymc.impl.Util;
 import net.caffeinemc.mods.lithium.common.world.chunk.LithiumHashPalette;
-import net.minecraft.block.BlockState;
-import net.minecraft.util.collection.IndexedIterable;
-import net.minecraft.world.chunk.ArrayPalette;
-import net.minecraft.world.chunk.BiMapPalette;
-import net.minecraft.world.chunk.SingularPalette;
+import net.minecraft.core.IdMap;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.HashMapPalette;
+import net.minecraft.world.level.chunk.LinearPalette;
+import net.minecraft.world.level.chunk.SingleValuePalette;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -35,11 +35,11 @@ import xyz.nucleoid.packettweaker.PacketContext;
  * Minecraft uses a different method to get ids when it sends chunks.
  * This Mixin makes sure that the blocks are polyd before they get sent to the client.
  */
-@Mixin(value = {ArrayPalette.class, BiMapPalette.class, SingularPalette.class, LithiumHashPalette.class})
+@Mixin(value = {LinearPalette.class, HashMapPalette.class, SingleValuePalette.class, LithiumHashPalette.class})
 public abstract class PaletteBlockPolyImplementation {
     
-    @Redirect(method = {"writePacket", "getPacketSize"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/util/collection/IndexedIterable;getRawId(Ljava/lang/Object;)I"))
-    public <T> int getIdRedirect(IndexedIterable<T> instance, T object) {
+    @Redirect(method = {"write", "getSerializedSize"}, at = @At(value = "INVOKE", target = "Lnet/minecraft/core/IdMap;getId(Ljava/lang/Object;)I"))
+    public <T> int getIdRedirect(IdMap<T> instance, T object) {
         if (object instanceof BlockState) {
             var player = PacketContext.get().getPlayer();
 
@@ -47,6 +47,6 @@ public abstract class PaletteBlockPolyImplementation {
             return map.getClientStateRawId((BlockState)object, player);
         }
 
-        return instance.getRawId(object);
+        return instance.getId(object);
     }
 }

@@ -7,18 +7,21 @@ import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.poly.entity.DefaultedEntityPoly;
 import io.github.theepicblock.polymc.impl.poly.entity.FlyingItemEntityPoly;
 import io.github.theepicblock.polymc.impl.poly.entity.MissingEntityPoly;
-import net.minecraft.entity.*;
-import net.minecraft.entity.mob.AbstractPiglinEntity;
-import net.minecraft.entity.mob.AbstractSkeletonEntity;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.passive.AbstractDonkeyEntity;
-import net.minecraft.entity.passive.AbstractHorseEntity;
-import net.minecraft.entity.passive.FishEntity;
-import net.minecraft.entity.passive.GolemEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.entity.vehicle.AbstractMinecartEntity;
-import net.minecraft.registry.Registries;
-
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.AbstractFish;
+import net.minecraft.world.entity.animal.AbstractGolem;
+import net.minecraft.world.entity.animal.FlyingAnimal;
+import net.minecraft.world.entity.animal.horse.AbstractChestedHorse;
+import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.monster.AbstractSkeleton;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.minecraft.world.entity.projectile.ItemSupplier;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.vehicle.AbstractMinecart;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -30,7 +33,7 @@ public class EntityPolyGenerator {
      * Generates the most suitable {@link EntityPoly} for a given {@link EntityType}
      */
     public static <T extends Entity> EntityPoly<T> generatePoly(EntityType<T> entityType, PolyRegistry builder) {
-        if (Registries.ENTITY_TYPE.getId(entityType).getNamespace().equals("taterzens")) {
+        if (BuiltInRegistries.ENTITY_TYPE.getKey(entityType).getNamespace().equals("taterzens")) {
             return (info, entity) -> null; // Compatibility with Taterzens
         }
 
@@ -41,8 +44,8 @@ public class EntityPolyGenerator {
 
         // Iterate over all vanilla entities to see if any are assignable
         var possible = new ArrayList<EntityType<?>>();
-        for (var possibleType : Registries.ENTITY_TYPE) {
-            var id = Registries.ENTITY_TYPE.getId(possibleType);
+        for (var possibleType : BuiltInRegistries.ENTITY_TYPE) {
+            var id = BuiltInRegistries.ENTITY_TYPE.getKey(possibleType);
             if (Util.isVanilla(id)) {
                 Class<?> vanillaEntityClass = InternalEntityHelpers.getEntityClass(possibleType);
 
@@ -74,11 +77,11 @@ public class EntityPolyGenerator {
             return new DefaultedEntityPoly<>(possible.get(0));
         }
 
-        if (FlyingItemEntity.class.isAssignableFrom(baseClass)) {
+        if (ItemSupplier.class.isAssignableFrom(baseClass)) {
             return new FlyingItemEntityPoly();
         }
 
-        if (GolemEntity.class.isAssignableFrom(baseClass)) {
+        if (AbstractGolem.class.isAssignableFrom(baseClass)) {
             if (entityType.getWidth() > 1) {
                 return new DefaultedEntityPoly<>(EntityType.IRON_GOLEM);
             } else {
@@ -87,14 +90,14 @@ public class EntityPolyGenerator {
         }
 
         var otherCommonClasses = new HashMap<Class<?>, EntityType<?>>();
-        otherCommonClasses.put(AbstractDonkeyEntity.class, EntityType.DONKEY);
-        otherCommonClasses.put(AbstractHorseEntity.class, EntityType.HORSE);
-        otherCommonClasses.put(AbstractPiglinEntity.class, EntityType.PIGLIN);
-        otherCommonClasses.put(AbstractSkeletonEntity.class, EntityType.SKELETON);
-        otherCommonClasses.put(AbstractMinecartEntity.class, EntityType.MINECART);
-        otherCommonClasses.put(ProjectileEntity.class, EntityType.ARROW);
-        otherCommonClasses.put(FishEntity.class, EntityType.COD);
-        otherCommonClasses.put(Flutterer.class, EntityType.PARROT);
+        otherCommonClasses.put(AbstractChestedHorse.class, EntityType.DONKEY);
+        otherCommonClasses.put(AbstractHorse.class, EntityType.HORSE);
+        otherCommonClasses.put(AbstractPiglin.class, EntityType.PIGLIN);
+        otherCommonClasses.put(AbstractSkeleton.class, EntityType.SKELETON);
+        otherCommonClasses.put(AbstractMinecart.class, EntityType.MINECART);
+        otherCommonClasses.put(Projectile.class, EntityType.ARROW);
+        otherCommonClasses.put(AbstractFish.class, EntityType.COD);
+        otherCommonClasses.put(FlyingAnimal.class, EntityType.PARROT);
 
         for (var clazz : otherCommonClasses.keySet()) {
             if (clazz.isAssignableFrom(baseClass)) {
@@ -104,7 +107,7 @@ public class EntityPolyGenerator {
 
         if (LivingEntity.class.isAssignableFrom(baseClass)) {
             if (entityType.getHeight() > 1.5) {
-                if (Monster.class.isAssignableFrom(baseClass)) {
+                if (Enemy.class.isAssignableFrom(baseClass)) {
                     return new DefaultedEntityPoly<>(EntityType.ZOMBIE);
                 } else {
                     return new DefaultedEntityPoly<>(EntityType.ARMOR_STAND);

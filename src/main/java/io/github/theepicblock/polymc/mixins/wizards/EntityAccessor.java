@@ -1,43 +1,43 @@
 package io.github.theepicblock.polymc.mixins.wizards;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.world.entity.Entity;
 
 @Mixin(Entity.class)
 public interface EntityAccessor {
-    @Accessor("CURRENT_ID")
+    @Accessor("ENTITY_COUNTER")
     static AtomicInteger getEntityIdCounter() {
         throw new IllegalStateException();
     }
 
-    @Accessor("FLAGS")
-    static TrackedData<Byte> getFlagTracker() {
+    @Accessor("DATA_SHARED_FLAGS_ID")
+    static EntityDataAccessor<Byte> getFlagTracker() {
         throw new IllegalStateException();
     }
 
-    @Accessor("NO_GRAVITY")
-    static TrackedData<Boolean> getNoGravityTracker() {
+    @Accessor("DATA_NO_GRAVITY")
+    static EntityDataAccessor<Boolean> getNoGravityTracker() {
         throw new IllegalStateException();
     }
 
-    @Accessor("SILENT")
-    static TrackedData<Boolean> getSilentTracker() {
+    @Accessor("DATA_SILENT")
+    static EntityDataAccessor<Boolean> getSilentTracker() {
         throw new IllegalStateException();
     }
 
-    @Accessor("CUSTOM_NAME")
-    static TrackedData<Optional<Text>> getCustomName() {
+    @Accessor("DATA_CUSTOM_NAME")
+    static EntityDataAccessor<Optional<Component>> getCustomName() {
         throw new UnsupportedOperationException();
     }
 
-    @Accessor("NAME_VISIBLE")
-    static TrackedData<Boolean> getNameVisible() {
+    @Accessor("DATA_CUSTOM_NAME_VISIBLE")
+    static EntityDataAccessor<Boolean> getNameVisible() {
         throw new UnsupportedOperationException();
     }
 }

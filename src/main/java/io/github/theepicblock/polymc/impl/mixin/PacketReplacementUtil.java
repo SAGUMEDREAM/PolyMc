@@ -18,30 +18,29 @@
 package io.github.theepicblock.polymc.impl.mixin;
 
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
 import java.util.function.Consumer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundLevelEventPacket;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class PacketReplacementUtil {
-    public static void syncWorldEvent(World world, PlayerEntity exception, int eventId, BlockPos pos, BlockState data) {
+    public static void syncWorldEvent(Level world, Player exception, int eventId, BlockPos pos, BlockState data) {
         if (world.getServer() != null) {
-            sendToAround(world.getServer().getPlayerManager(), exception, pos.getX(), pos.getY(), pos.getZ(), 64, world.getRegistryKey(), (playerEntity) -> {
-                playerEntity.networkHandler.sendPacket(new WorldEventS2CPacket(eventId, pos, Util.getPolydRawIdFromState(data, playerEntity), false));
+            sendToAround(world.getServer().getPlayerList(), exception, pos.getX(), pos.getY(), pos.getZ(), 64, world.dimension(), (playerEntity) -> {
+                playerEntity.connection.send(new ClientboundLevelEventPacket(eventId, pos, Util.getPolydRawIdFromState(data, playerEntity), false));
             });
         }
     }
 
-    public static void sendToAround(PlayerManager manager, PlayerEntity exception, double x, double y, double z, double distance, RegistryKey<World> worldKey, Consumer<ServerPlayerEntity> consumer) {
-        for (int i = 0; i < manager.getPlayerList().size(); ++i) {
-            ServerPlayerEntity serverPlayerEntity = manager.getPlayerList().get(i);
-            if (serverPlayerEntity != exception && serverPlayerEntity.getWorld().getRegistryKey() == worldKey) {
+    public static void sendToAround(PlayerList manager, Player exception, double x, double y, double z, double distance, ResourceKey<Level> worldKey, Consumer<ServerPlayer> consumer) {
+        for (int i = 0; i < manager.getPlayers().size(); ++i) {
+            ServerPlayer serverPlayerEntity = manager.getPlayers().get(i);
+            if (serverPlayerEntity != exception && serverPlayerEntity.level().dimension() == worldKey) {
                 double d = x - serverPlayerEntity.getX();
                 double e = y - serverPlayerEntity.getY();
                 double f = z - serverPlayerEntity.getZ();

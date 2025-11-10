@@ -3,18 +3,17 @@ package io.github.theepicblock.polymc.impl.poly.wizard;
 import io.github.theepicblock.polymc.api.wizard.PacketConsumer;
 import io.github.theepicblock.polymc.api.wizard.VirtualEntity;
 import io.github.theepicblock.polymc.mixins.wizards.EntityAccessor;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
-
 import java.util.UUID;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 public abstract class AbstractVirtualEntity implements VirtualEntity {
     protected final UUID uuid;
     protected final int id;
 
     public AbstractVirtualEntity() {
-        this.uuid = MathHelper.randomUuid();
+        this.uuid = Mth.createInsecureUUID();
         this.id = EntityUtil.getNewEntityId();
     }
 
@@ -24,29 +23,29 @@ public abstract class AbstractVirtualEntity implements VirtualEntity {
     }
 
     @Override
-    public void spawn(PacketConsumer player, Vec3d pos) {
-        player.sendPacket(new EntitySpawnS2CPacket(
+    public void spawn(PacketConsumer player, Vec3 pos) {
+        player.sendPacket(new ClientboundAddEntityPacket(
                 this.id,
-                MathHelper.randomUuid(),
-                pos.getX(),
-                pos.getY(),
-                pos.getZ(),
+                Mth.createInsecureUUID(),
+                pos.x(),
+                pos.y(),
+                pos.z(),
                 0,
                 0,
                 this.getEntityType(),
                 0,
-                Vec3d.ZERO,
+                Vec3.ZERO,
                 0
         ));
     }
 
-    public void spawn(PacketConsumer player, Vec3d pos, float pitch, float yaw, int entityData, Vec3d velocity) {
-        player.sendPacket(new EntitySpawnS2CPacket(
+    public void spawn(PacketConsumer player, Vec3 pos, float pitch, float yaw, int entityData, Vec3 velocity) {
+        player.sendPacket(new ClientboundAddEntityPacket(
                 this.id,
-                MathHelper.randomUuid(),
-                pos.getX(),
-                pos.getY(),
-                pos.getZ(),
+                Mth.createInsecureUUID(),
+                pos.x(),
+                pos.y(),
+                pos.z(),
                 pitch,
                 yaw,
                 this.getEntityType(),
@@ -56,12 +55,12 @@ public abstract class AbstractVirtualEntity implements VirtualEntity {
         ));
     }
 
-    public void move(PacketConsumer player, Vec3d pos, float yaw, float pitch, boolean onGround) {
-        move(player, pos.getX(), pos.getY(), pos.getZ(), (byte)((int)(yaw * 256.0F / 360.0F)), (byte)((int)(pitch * 256.0F / 360.0F)), onGround);
+    public void move(PacketConsumer player, Vec3 pos, float yaw, float pitch, boolean onGround) {
+        move(player, pos.x(), pos.y(), pos.z(), (byte)((int)(yaw * 256.0F / 360.0F)), (byte)((int)(pitch * 256.0F / 360.0F)), onGround);
     }
 
-    public void move(PacketConsumer player, Vec3d pos, byte yaw, byte pitch, boolean onGround) {
-        move(player, pos.getX(), pos.getY(), pos.getZ(), yaw, pitch, onGround);
+    public void move(PacketConsumer player, Vec3 pos, byte yaw, byte pitch, boolean onGround) {
+        move(player, pos.x(), pos.y(), pos.z(), yaw, pitch, onGround);
     }
 
     public void move(PacketConsumer player, double x, double y, double z, byte yaw, byte pitch, boolean onGround) {
@@ -76,16 +75,16 @@ public abstract class AbstractVirtualEntity implements VirtualEntity {
         ));
     }
 
-    public void sendVelocity(PacketConsumer player, Vec3d velocity) {
+    public void sendVelocity(PacketConsumer player, Vec3 velocity) {
         sendVelocity(player, velocity.x, velocity.y, velocity.z);
     }
 
     public void sendVelocity(PacketConsumer player, double x, double y, double z) {
         player.sendPacket(EntityUtil.createEntityVelocityUpdate(
                 this.id,
-                (int)(MathHelper.clamp(x, -3.9, 3.9) * 8000.0),
-                (int)(MathHelper.clamp(x, -3.9, 3.9) * 8000.0),
-                (int)(MathHelper.clamp(x, -3.9, 3.9) * 8000.0)
+                (int)(Mth.clamp(x, -3.9, 3.9) * 8000.0),
+                (int)(Mth.clamp(x, -3.9, 3.9) * 8000.0),
+                (int)(Mth.clamp(x, -3.9, 3.9) * 8000.0)
         ));
     }
 

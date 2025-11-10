@@ -17,12 +17,12 @@
  */
 package io.github.theepicblock.polymc.impl.poly.gui;
 
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
-public class DummyInventory implements Inventory {
+public class DummyInventory implements Container {
     private final int size;
 
     public DummyInventory(int size) {
@@ -30,7 +30,7 @@ public class DummyInventory implements Inventory {
     }
 
     @Override
-    public int size() {
+    public int getContainerSize() {
         return size;
     }
 
@@ -40,37 +40,37 @@ public class DummyInventory implements Inventory {
     }
 
     @Override
-    public ItemStack getStack(int slot) {
+    public ItemStack getItem(int slot) {
         return new ItemStack(Items.DIRT);
     }
 
     @Override
-    public ItemStack removeStack(int slot, int amount) {
+    public ItemStack removeItem(int slot, int amount) {
         return new ItemStack(Items.DIRT);
     }
 
     @Override
-    public ItemStack removeStack(int slot) {
+    public ItemStack removeItemNoUpdate(int slot) {
         return new ItemStack(Items.DIRT);
     }
 
     @Override
-    public void setStack(int slot, ItemStack stack) {
+    public void setItem(int slot, ItemStack stack) {
 
     }
 
     @Override
-    public void markDirty() {
+    public void setChanged() {
 
     }
 
     @Override
-    public boolean canPlayerUse(PlayerEntity player) {
+    public boolean stillValid(Player player) {
         return true;
     }
 
     @Override
-    public void clear() {
+    public void clearContent() {
 
     }
 }

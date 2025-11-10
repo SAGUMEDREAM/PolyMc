@@ -1,7 +1,7 @@
 package io.github.theepicblock.polymc.impl.mixin;
 
 import io.github.theepicblock.polymc.impl.ConfigManager;
-import net.minecraft.block.BlockState;
+import net.minecraft.world.level.block.state.BlockState;
 
 public interface BlockStateDuck {
     void polymc$setVanilla(boolean value);

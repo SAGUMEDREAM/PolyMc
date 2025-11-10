@@ -23,9 +23,6 @@ import io.github.theepicblock.polymc.api.resource.ModdedResources;
 import io.github.theepicblock.polymc.api.resource.PolyMcResourcePack;
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.Registries;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
@@ -33,6 +30,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * Manages which blockstates are allocated to which polys.
@@ -83,7 +83,7 @@ public class BlockStateManager {
         for (var block : searchSpace) {
             onFirstRegister.accept(block, this.polyRegistry);
             var availableStates = availableBlockStates.computeIfAbsent(block, (b) -> {
-                return new LinkedList<>(b.getStateManager().getStates().stream().filter(Util::isVanilla).toList());
+                return new LinkedList<>(b.getStateDefinition().getPossibleStates().stream().filter(Util::isVanilla).toList());
             });
 
             // Return first block state that matches `blockStatePredicate`
@@ -121,7 +121,7 @@ public class BlockStateManager {
             return List.of(new SharedValuesKey.DebugDumpSection("BLOCKS (STATE LEFT)", builder -> {
                 for (var entry : availableBlockStates.entrySet()) {
                     builder.append("- ");
-                    builder.append(Registries.BLOCK.getId(entry.getKey())).append(" - ").append(entry.getValue().size());
+                    builder.append(BuiltInRegistries.BLOCK.getKey(entry.getKey())).append(" - ").append(entry.getValue().size());
                     builder.append("\n");
                 }
             }));

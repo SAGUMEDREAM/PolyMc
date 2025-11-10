@@ -2,32 +2,32 @@ package io.github.theepicblock.polymc.impl.poly.wizard;
 
 import io.github.theepicblock.polymc.api.wizard.UpdateInfo;
 import io.github.theepicblock.polymc.api.wizard.WizardInfo;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class PlacedWizardInfo implements WizardInfo {
-    private final Vec3d position;
+    private final Vec3 position;
     private final BlockPos blockPos;
-    private final ServerWorld world;
+    private final ServerLevel world;
 
-    public PlacedWizardInfo(BlockPos blockPos, ServerWorld world) {
+    public PlacedWizardInfo(BlockPos blockPos, ServerLevel world) {
         this.blockPos = blockPos;
         this.world = world;
-        this.position = Vec3d.of(blockPos).add(0.5, 0, 0.5);
+        this.position = Vec3.atLowerCornerOf(blockPos).add(0.5, 0, 0.5);
     }
 
     @Override
-    public @NotNull Vec3d getPosition() {
+    public @NotNull Vec3 getPosition() {
         return this.position;
     }
 
     @Override
-    public @NotNull Vec3d getPosition(UpdateInfo info) {
+    public @NotNull Vec3 getPosition(UpdateInfo info) {
         return this.position;
     }
 
@@ -47,7 +47,7 @@ public class PlacedWizardInfo implements WizardInfo {
     }
 
     @Override
-    public @Nullable ServerWorld getWorld() {
+    public @Nullable ServerLevel getWorld() {
         return this.world;
     }
 }

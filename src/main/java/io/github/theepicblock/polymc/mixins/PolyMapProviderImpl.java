@@ -21,11 +21,11 @@ import io.github.theepicblock.polymc.PolyMc;
 import io.github.theepicblock.polymc.api.PolyMap;
 import io.github.theepicblock.polymc.api.misc.PolyMapProvider;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.network.ClientConnection;
+import net.minecraft.network.Connection;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
-@Mixin(ClientConnection.class)
+@Mixin(Connection.class)
 public class PolyMapProviderImpl implements PolyMapProvider {
     @Unique private PolyMap polyMap;
 

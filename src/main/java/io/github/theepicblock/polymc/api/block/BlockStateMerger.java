@@ -1,42 +1,41 @@
 package io.github.theepicblock.polymc.api.block;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.DoorBlock;
-import net.minecraft.block.TrapdoorBlock;
-import net.minecraft.block.enums.SlabType;
-import net.minecraft.state.property.Properties;
-import net.minecraft.state.property.Property;
-
 import java.util.function.BiFunction;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.block.state.properties.SlabType;
 
 /**
  * It's recommended to read the comments inside the code of {@link io.github.theepicblock.polymc.impl.poly.block.FunctionBlockStatePoly#FunctionBlockStatePoly(Block, BiFunction, BlockStateMerger)}, which is where the merger will be used.
  */
 @FunctionalInterface
 public interface BlockStateMerger {
-    BlockStateMerger DEFAULT = new PropertyMerger<>(Properties.STAGE)
-            .combine(new PropertyMerger<>(Properties.DISTANCE_1_7))
-            .combine(new PropertyMerger<>(Properties.DISTANCE_0_7))
-            .combine(new PropertyMerger<>(Properties.AGE_15))
-            .combine(new PropertyMerger<>(Properties.POWERED, state -> state.getBlock() instanceof DoorBlock || state.getBlock() instanceof TrapdoorBlock))
-            .combine(new PropertyMerger<>(Properties.TRIGGERED))
-            .combine(new PropertyMerger<>(Properties.PERSISTENT))
-            .combine(new PropertyMerger<>(Properties.NOTE))
-            .combine(new PropertyMerger<>(Properties.INSTRUMENT))
+    BlockStateMerger DEFAULT = new PropertyMerger<>(BlockStateProperties.STAGE)
+            .combine(new PropertyMerger<>(BlockStateProperties.DISTANCE))
+            .combine(new PropertyMerger<>(BlockStateProperties.STABILITY_DISTANCE))
+            .combine(new PropertyMerger<>(BlockStateProperties.AGE_15))
+            .combine(new PropertyMerger<>(BlockStateProperties.POWERED, state -> state.getBlock() instanceof DoorBlock || state.getBlock() instanceof TrapDoorBlock))
+            .combine(new PropertyMerger<>(BlockStateProperties.TRIGGERED))
+            .combine(new PropertyMerger<>(BlockStateProperties.PERSISTENT))
+            .combine(new PropertyMerger<>(BlockStateProperties.NOTE))
+            .combine(new PropertyMerger<>(BlockStateProperties.NOTEBLOCK_INSTRUMENT))
             .combine((state) -> {
-                if (state.contains(Properties.MOISTURE)) {
+                if (state.hasProperty(BlockStateProperties.MOISTURE)) {
                     // Moisture lower than 7 are the same
-                    if (state.get(Properties.MOISTURE) < 7) {
-                        return state.with(Properties.MOISTURE, 0);
+                    if (state.getValue(BlockStateProperties.MOISTURE) < 7) {
+                        return state.setValue(BlockStateProperties.MOISTURE, 0);
                     }
                 }
                 return state;
             }).combine((state) -> {
-                if (state.contains(Properties.SLAB_TYPE) && state.contains(Properties.WATERLOGGED)) {
+                if (state.hasProperty(BlockStateProperties.SLAB_TYPE) && state.hasProperty(BlockStateProperties.WATERLOGGED)) {
                     // Waterlogged double slabs do not need to exist
-                    if (state.get(Properties.SLAB_TYPE) == SlabType.DOUBLE && state.get(Properties.WATERLOGGED)) {
-                        return state.with(Properties.WATERLOGGED, false);
+                    if (state.getValue(BlockStateProperties.SLAB_TYPE) == SlabType.DOUBLE && state.getValue(BlockStateProperties.WATERLOGGED)) {
+                        return state.setValue(BlockStateProperties.WATERLOGGED, false);
                     }
                 }
                 return state;
@@ -55,6 +54,6 @@ public interface BlockStateMerger {
     }
 
     static <T extends Comparable<T>> BlockState normalizeProperty(BlockState state, Property<T> property) {
-        return state.with(property, property.getValues().iterator().next());
+        return state.setValue(property, property.getPossibleValues().iterator().next());
     }
 }

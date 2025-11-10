@@ -3,26 +3,26 @@ package io.github.theepicblock.polymc.api.wizard;
 import io.github.theepicblock.polymc.impl.poly.wizard.AbstractVirtualEntity;
 import io.github.theepicblock.polymc.impl.poly.wizard.EntityUtil;
 import io.github.theepicblock.polymc.mixins.wizards.ItemFrameEntityAccessor;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 
 public class VItemFrame extends AbstractVirtualEntity {
-    public void spawn(PacketConsumer player, Vec3d pos, Direction facing) {
-        player.sendPacket(new EntitySpawnS2CPacket(
+    public void spawn(PacketConsumer player, Vec3 pos, Direction facing) {
+        player.sendPacket(new ClientboundAddEntityPacket(
                 id,
-                MathHelper.randomUuid(),
-                pos.getX(),
-                pos.getY(),
-                pos.getZ(),
+                Mth.createInsecureUUID(),
+                pos.x(),
+                pos.y(),
+                pos.z(),
                 0,
                 0,
                 this.getEntityType(),
                 facing.ordinal(),
-                Vec3d.ZERO,
+                Vec3.ZERO,
                 0
         ));
     }

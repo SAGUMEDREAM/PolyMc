@@ -17,9 +17,8 @@
  */
 package io.github.theepicblock.polymc.impl.poly.block;
 
-import net.minecraft.block.BlockState;
-
 import java.util.function.Predicate;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * This block poly replaces the the block it's registered to with another blockstate, but only if condition returns true

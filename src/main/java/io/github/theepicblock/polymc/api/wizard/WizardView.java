@@ -1,21 +1,21 @@
 package io.github.theepicblock.polymc.api.wizard;
 
 import io.github.theepicblock.polymc.impl.misc.PolyMapMap;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 
 public interface WizardView {
     /**
      * @see #getWizards(BlockPos)
      */
-    static PolyMapMap<Wizard> getWizards(World world, BlockPos pos) {
+    static PolyMapMap<Wizard> getWizards(Level world, BlockPos pos) {
         return ((WizardView)world).getWizards(pos);
     }
 
     /**
      * @see #removeWizards(BlockPos, boolean)
      */
-    static PolyMapMap<Wizard> removeWizards(World world, BlockPos pos, boolean move) {
+    static PolyMapMap<Wizard> removeWizards(Level world, BlockPos pos, boolean move) {
         return ((WizardView)world).removeWizards(pos, move);
     }
 

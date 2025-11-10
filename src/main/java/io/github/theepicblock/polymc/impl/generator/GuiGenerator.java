@@ -20,24 +20,24 @@ package io.github.theepicblock.polymc.impl.generator;
 import io.github.theepicblock.polymc.api.PolyRegistry;
 import io.github.theepicblock.polymc.api.gui.GuiPoly;
 import io.github.theepicblock.polymc.impl.poly.gui.NaiveStackListingChestPoly;
-import net.minecraft.screen.ScreenHandlerType;
+import net.minecraft.world.inventory.MenuType;
 
 /**
- * Class to automatically generate {@link GuiPoly}s for {@link ScreenHandlerType}s
+ * Class to automatically generate {@link GuiPoly}s for {@link MenuType}s
  */
 public class GuiGenerator {
     /**
-     * Generates the most suitable {@link GuiPoly} for a given {@link ScreenHandlerType}
+     * Generates the most suitable {@link GuiPoly} for a given {@link MenuType}
      */
-    public static GuiPoly generatePoly(ScreenHandlerType<?> gui, PolyRegistry builder) {
+    public static GuiPoly generatePoly(MenuType<?> gui, PolyRegistry builder) {
         return new NaiveStackListingChestPoly();
     }
 
     /**
      * Generates the most suitable {@link GuiPoly} and directly adds it to the {@link PolyRegistry}
-     * @see #generatePoly(ScreenHandlerType, PolyRegistry)
+     * @see #generatePoly(MenuType, PolyRegistry)
      */
-    public static void addGuiToBuilder(ScreenHandlerType<?> gui, PolyRegistry builder) {
+    public static void addGuiToBuilder(MenuType<?> gui, PolyRegistry builder) {
         builder.registerGuiPoly(gui, generatePoly(gui, builder));
     }
 }

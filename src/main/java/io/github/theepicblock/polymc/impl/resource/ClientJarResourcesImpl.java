@@ -4,10 +4,10 @@ import io.github.theepicblock.polymc.api.resource.ClientJarResources;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.resource.InputSupplier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Pair;
+import net.minecraft.server.packs.resources.IoSupplier;
+import net.minecraft.util.Tuple;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.Nullable;
@@ -38,7 +38,7 @@ public class ClientJarResourcesImpl implements ClientJarResources {
     }
 
     @Override
-    public @Nullable InputSupplier<InputStream> getInputStreamSupplier(String namespace, String path) {
+    public @Nullable IoSupplier<InputStream> getInputStreamSupplier(String namespace, String path) {
         if (containsAsset(namespace, path)) {
             return () -> getInputStream(namespace, path);
         } else {
@@ -62,7 +62,7 @@ public class ClientJarResourcesImpl implements ClientJarResources {
     }
 
     @Override
-    public Set<Pair<Identifier,InputSupplier<InputStream>>> locateLanguageFiles() {
+    public Set<Tuple<ResourceLocation,IoSupplier<InputStream>>> locateLanguageFiles() {
         throw new NotImplementedException();
     }
 

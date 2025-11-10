@@ -22,12 +22,35 @@ import io.github.theepicblock.polymc.impl.poly.block.ConditionalSimpleBlockPoly;
 import io.github.theepicblock.polymc.impl.poly.block.ListOfSlabs;
 import io.github.theepicblock.polymc.impl.poly.block.PropertyRetainingReplacementPoly;
 import io.github.theepicblock.polymc.impl.poly.block.SimpleReplacementPoly;
-import net.minecraft.block.*;
-import net.minecraft.block.enums.*;
-import net.minecraft.item.HoneycombItem;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.math.Direction;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.HoneycombItem;
+import net.minecraft.world.level.block.BeehiveBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CaveVines;
+import net.minecraft.world.level.block.ChorusFlowerBlock;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.DoublePlantBlock;
+import net.minecraft.world.level.block.FarmBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.GrassBlock;
+import net.minecraft.world.level.block.GrowingPlantHeadBlock;
+import net.minecraft.world.level.block.InfestedBlock;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.PipeBlock;
+import net.minecraft.world.level.block.SculkSensorBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.SmallDripleafBlock;
+import net.minecraft.world.level.block.TripWireBlock;
+import net.minecraft.world.level.block.WallBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.DoorHingeSide;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.level.block.state.properties.SculkSensorPhase;
+import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.world.level.block.state.properties.WallSide;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.ApiStatus;
 
@@ -103,46 +126,46 @@ public class BlockStateProfile {
     /////////////////
     //   FILTERS   //
     /////////////////
-    private static final Predicate<BlockState> DEFAULT_FILTER = (blockState) -> blockState != blockState.getBlock().getDefaultState();
+    private static final Predicate<BlockState> DEFAULT_FILTER = (blockState) -> blockState != blockState.getBlock().defaultBlockState();
     private static final Predicate<BlockState> ALWAYS_TRUE_FILTER = (blockState) -> true;
     private static final Predicate<BlockState> LEAVES_FILTER = (blockState) ->
             // We choose the persistent states as the ones we don't mess with because that's the default placement state
-            blockState != blockState.getBlock().getDefaultState().with(LeavesBlock.PERSISTENT, true) &&
-            !blockState.get(LeavesBlock.WATERLOGGED);
+            blockState != blockState.getBlock().defaultBlockState().setValue(LeavesBlock.PERSISTENT, true) &&
+            !blockState.getValue(LeavesBlock.WATERLOGGED);
     private static final Predicate<BlockState> WALL_FILTER = (blockState) ->
-            blockState.get(WallBlock.NORTH_WALL_SHAPE) == WallShape.NONE &&
-            blockState.get(WallBlock.WEST_WALL_SHAPE) == WallShape.NONE &&
-            blockState.get(WallBlock.EAST_WALL_SHAPE) == WallShape.NONE &&
-            blockState.get(WallBlock.SOUTH_WALL_SHAPE) == WallShape.NONE &&
-            blockState.get(WallBlock.UP) == false;
+            blockState.getValue(WallBlock.NORTH) == WallSide.NONE &&
+            blockState.getValue(WallBlock.WEST) == WallSide.NONE &&
+            blockState.getValue(WallBlock.EAST) == WallSide.NONE &&
+            blockState.getValue(WallBlock.SOUTH) == WallSide.NONE &&
+            blockState.getValue(WallBlock.UP) == false;
     private static final Predicate<BlockState> TRIPWIRE_FILTER = BlockStateProfile::isStringUseable;
-    private static final Predicate<BlockState> PRESSURE_PLATE_FILTER = state -> state.get(Properties.POWER) > 1;
-    private static final Predicate<BlockState> SMALL_DRIPLEAF_FILTER = state -> state.get(TallPlantBlock.HALF) == DoubleBlockHalf.LOWER && state.get(SmallDripleafBlock.FACING) != Direction.NORTH;
-    private static final Predicate<BlockState> CAVE_VINES_FILTER = state -> state.get(AbstractPlantStemBlock.AGE) != 0 && state.get(CaveVines.BERRIES) != true; // Don't use the berry states, they cause desyncs on right-click
+    private static final Predicate<BlockState> PRESSURE_PLATE_FILTER = state -> state.getValue(BlockStateProperties.POWER) > 1;
+    private static final Predicate<BlockState> SMALL_DRIPLEAF_FILTER = state -> state.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER && state.getValue(SmallDripleafBlock.FACING) != Direction.NORTH;
+    private static final Predicate<BlockState> CAVE_VINES_FILTER = state -> state.getValue(GrowingPlantHeadBlock.AGE) != 0 && state.getValue(CaveVines.BERRIES) != true; // Don't use the berry states, they cause desyncs on right-click
     private static final Predicate<BlockState> FARMLAND_FILTER = (blockState) -> {
-        int moisture = blockState.get(FarmlandBlock.MOISTURE);
+        int moisture = blockState.getValue(FarmBlock.MOISTURE);
         return moisture != 0 && moisture != 7;
     };
     private static final Predicate<BlockState> BEEHIVE_FILTER = (blockState) -> {
-        int level = blockState.get(BeehiveBlock.HONEY_LEVEL);
-        return level != 0 && level != BeehiveBlock.FULL_HONEY_LEVEL;
+        int level = blockState.getValue(BeehiveBlock.HONEY_LEVEL);
+        return level != 0 && level != BeehiveBlock.MAX_HONEY_LEVELS;
     };
     private static final Predicate<BlockState> DOOR_FILTER = (blockState) -> getDoorCannonState(blockState) != blockState;
-    private static final Predicate<BlockState> POWERED_FILTER = (blockState) -> blockState.get(Properties.POWERED) == true;
-    private static final Predicate<BlockState> TRIGGERED_FILTER = (blockState) -> blockState.get(Properties.TRIGGERED) == true;
-    private static final Predicate<BlockState> OPEN_FENCE_GATE_FILTER = POWERED_FILTER.and(state -> state.get(FenceGateBlock.OPEN) == true);
-    private static final Predicate<BlockState> FENCE_GATE_FILTER = POWERED_FILTER.and(state -> state.get(FenceGateBlock.OPEN) == false);
-    private static final Predicate<BlockState> SCULK_FILTER = (blockState) -> blockState.get(SculkSensorBlock.POWER) != 0 && blockState.get(SculkSensorBlock.SCULK_SENSOR_PHASE) != SculkSensorPhase.ACTIVE; // Active sculk sensors have particles and emissive lighting
-    private static final Predicate<BlockState> SNOWY_GRASS_FILTER = (blockState) -> blockState.get(GrassBlock.SNOWY);
-    private static final Predicate<BlockState> DOUBLE_SLAB_FILTER = (blockState) -> blockState.get(SlabBlock.TYPE) == SlabType.DOUBLE;
-    private static final Predicate<BlockState> WATERLOGGED_SLAB_FILTER = (blockState) -> blockState.get(SlabBlock.TYPE) == SlabType.DOUBLE && blockState.get(SlabBlock.WATERLOGGED);
-    private static final Predicate<BlockState> SLAB_FILTER = (blockState) -> blockState.get(SlabBlock.TYPE) != SlabType.DOUBLE;
+    private static final Predicate<BlockState> POWERED_FILTER = (blockState) -> blockState.getValue(BlockStateProperties.POWERED) == true;
+    private static final Predicate<BlockState> TRIGGERED_FILTER = (blockState) -> blockState.getValue(BlockStateProperties.TRIGGERED) == true;
+    private static final Predicate<BlockState> OPEN_FENCE_GATE_FILTER = POWERED_FILTER.and(state -> state.getValue(FenceGateBlock.OPEN) == true);
+    private static final Predicate<BlockState> FENCE_GATE_FILTER = POWERED_FILTER.and(state -> state.getValue(FenceGateBlock.OPEN) == false);
+    private static final Predicate<BlockState> SCULK_FILTER = (blockState) -> blockState.getValue(SculkSensorBlock.POWER) != 0 && blockState.getValue(SculkSensorBlock.PHASE) != SculkSensorPhase.ACTIVE; // Active sculk sensors have particles and emissive lighting
+    private static final Predicate<BlockState> SNOWY_GRASS_FILTER = (blockState) -> blockState.getValue(GrassBlock.SNOWY);
+    private static final Predicate<BlockState> DOUBLE_SLAB_FILTER = (blockState) -> blockState.getValue(SlabBlock.TYPE) == SlabType.DOUBLE;
+    private static final Predicate<BlockState> WATERLOGGED_SLAB_FILTER = (blockState) -> blockState.getValue(SlabBlock.TYPE) == SlabType.DOUBLE && blockState.getValue(SlabBlock.WATERLOGGED);
+    private static final Predicate<BlockState> SLAB_FILTER = (blockState) -> blockState.getValue(SlabBlock.TYPE) != SlabType.DOUBLE;
 
     //////////////////////////
     //  ON FIRST REGISTERS  //
     //////////////////////////
     private static final Predicate<BlockState> CHORUS_FLOWER_FILTER = (blockState) -> {
-        int age = blockState.get(ChorusFlowerBlock.AGE);
+        int age = blockState.getValue(ChorusFlowerBlock.AGE);
         return age > 0 && age < 5;
     };
     private static final Predicate<BlockState> CHORUS_PLANT_FILTER = (blockState) -> {
@@ -166,83 +189,83 @@ public class BlockStateProfile {
     };
 
     //ON FIRST REGISTERS
-    private static final BiConsumer<Block,PolyRegistry> DEFAULT_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new SimpleReplacementPoly(block.getDefaultState()));
+    private static final BiConsumer<Block,PolyRegistry> DEFAULT_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new SimpleReplacementPoly(block.defaultBlockState()));
     private static final BiConsumer<Block,PolyRegistry> LEAVES_ON_FIRST_REGISTER = (block, polyRegistry) -> {
-        var defaultState = block.getDefaultState().with(LeavesBlock.PERSISTENT, true);
-        polyRegistry.registerBlockPoly(block, input -> defaultState.with(Properties.WATERLOGGED, input.get(Properties.WATERLOGGED)));
+        var defaultState = block.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true);
+        polyRegistry.registerBlockPoly(block, input -> defaultState.setValue(BlockStateProperties.WATERLOGGED, input.getValue(BlockStateProperties.WATERLOGGED)));
     };
     private static final BiConsumer<Block,PolyRegistry> WALL_ON_FIRST_REGISTER = (block, polyRegistry) -> {
         polyRegistry.registerBlockPoly(block, input -> {
             if (WALL_FILTER.test(input)) {
-                return input.getBlock().getDefaultState();
+                return input.getBlock().defaultBlockState();
             }
             return input;
         });
     };
     private static final BiConsumer<Block,PolyRegistry> TRIPWIRE_ON_FIRST_REGISTER = (block, polyRegistry) -> {
         polyRegistry.registerBlockPoly(block, (input) ->
-                input.with(Properties.POWERED, false).with(Properties.DISARMED,false)
+                input.setValue(BlockStateProperties.POWERED, false).setValue(BlockStateProperties.DISARMED,false)
         );
     };
     private static final BiConsumer<Block,PolyRegistry> SMALL_DRIPLEAF_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, input -> {
-        if (input.get(TallPlantBlock.HALF) == DoubleBlockHalf.LOWER) {
-            return input.with(SmallDripleafBlock.FACING, Direction.NORTH);
+        if (input.getValue(DoublePlantBlock.HALF) == DoubleBlockHalf.LOWER) {
+            return input.setValue(SmallDripleafBlock.FACING, Direction.NORTH);
         }
         return input;
     });
-    private static final BiConsumer<Block,PolyRegistry> CAVE_VINES_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, input -> input.with(AbstractPlantStemBlock.AGE, 0));
+    private static final BiConsumer<Block,PolyRegistry> CAVE_VINES_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, input -> input.setValue(GrowingPlantHeadBlock.AGE, 0));
     private static final BiConsumer<Block,PolyRegistry> SCULK_SENSOR_ON_FIRST_REGISTER = (block, polyRegistry) -> {
         polyRegistry.registerBlockPoly(block, (input) ->
-                input.with(SculkSensorBlock.POWER, 0)
+                input.setValue(SculkSensorBlock.POWER, 0)
         );
     };
-    private static final BiConsumer<Block,PolyRegistry> FARMLAND_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new ConditionalSimpleBlockPoly(Blocks.FARMLAND.getDefaultState(), FARMLAND_FILTER));
+    private static final BiConsumer<Block,PolyRegistry> FARMLAND_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new ConditionalSimpleBlockPoly(Blocks.FARMLAND.defaultBlockState(), FARMLAND_FILTER));
     private static final BiConsumer<Block,PolyRegistry> BEEHIVE_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, (input) -> {
         if (BEEHIVE_FILTER.test(input)) {
-            return input.with(BeehiveBlock.HONEY_LEVEL, 0);
+            return input.setValue(BeehiveBlock.HONEY_LEVEL, 0);
         }
         return input;
     });
     private static final BiConsumer<Block,PolyRegistry> PRESSURE_PLATE_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, (input) -> {
-        if (input.get(Properties.POWER) > 1) {
-            return input.with(Properties.POWER, 1);
+        if (input.getValue(BlockStateProperties.POWER) > 1) {
+            return input.setValue(BlockStateProperties.POWER, 1);
         }
         return input;
     });
     private static final BiConsumer<Block,PolyRegistry> DOOR_BLOCK_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, BlockStateProfile::getDoorCannonState);
-    private static final BiConsumer<Block,PolyRegistry> POWERED_BLOCK_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, (input) -> input.with(Properties.POWERED, false));
-    private static final BiConsumer<Block,PolyRegistry> TRIGGERED_BLOCK_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, (input) -> input.with(Properties.TRIGGERED, false));
+    private static final BiConsumer<Block,PolyRegistry> POWERED_BLOCK_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, (input) -> input.setValue(BlockStateProperties.POWERED, false));
+    private static final BiConsumer<Block,PolyRegistry> TRIGGERED_BLOCK_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, (input) -> input.setValue(BlockStateProperties.TRIGGERED, false));
     private static final BiConsumer<Block,PolyRegistry> SNOWY_GRASS_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, input -> {
-        if (input.get(GrassBlock.SNOWY)) {
-            return Blocks.GRASS_BLOCK.getDefaultState().with(GrassBlock.SNOWY, true);
+        if (input.getValue(GrassBlock.SNOWY)) {
+            return Blocks.GRASS_BLOCK.defaultBlockState().setValue(GrassBlock.SNOWY, true);
         }
         return input;
     });
     private static final BiConsumer<Block,PolyRegistry> WAXED_COPPER_ON_FIRST_REGISTER = (block, polyRegistry) -> {
-        var unwaxedBlock = HoneycombItem.WAXED_TO_UNWAXED_BLOCKS.get().get(block);
+        var unwaxedBlock = HoneycombItem.WAX_OFF_BY_BLOCK.get().get(block);
         polyRegistry.registerBlockPoly(block, new PropertyRetainingReplacementPoly(unwaxedBlock));
     };
-    private static final BiConsumer<Block,PolyRegistry> INFESTED_BLOCK_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, input -> ((InfestedBlock)block).toRegularState(input));
+    private static final BiConsumer<Block,PolyRegistry> INFESTED_BLOCK_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, input -> ((InfestedBlock)block).hostStateByInfested(input));
     private static final BiConsumer<Block,PolyRegistry> DOUBLESLAB_ON_FIRST_REGISTER = (block, polyRegistry) -> {
-        if (!ListOfSlabs.SLAB2FULL.containsKey(block)) throw new IllegalArgumentException(block.getTranslationKey() + " isn't a registered slab");
+        if (!ListOfSlabs.SLAB2FULL.containsKey(block)) throw new IllegalArgumentException(block.getDescriptionId() + " isn't a registered slab");
         // We can replace (for example) oak double slabs with regular oak planks. Because double slabs can technically be waterlogged this frees up two states per slab
-        var regularFullBlock = ListOfSlabs.SLAB2FULL.get(block).getDefaultState();
+        var regularFullBlock = ListOfSlabs.SLAB2FULL.get(block).defaultBlockState();
         if (ArrayUtils.contains(WAXED_COPPER_SLAB_BLOCKS, block) || block == Blocks.PETRIFIED_OAK_SLAB) {
             var slabReplacement = block == Blocks.PETRIFIED_OAK_SLAB ?
-                    Blocks.PETRIFIED_OAK_SLAB.getDefaultState() :
-                    HoneycombItem.WAXED_TO_UNWAXED_BLOCKS.get().get(block).getDefaultState();
+                    Blocks.PETRIFIED_OAK_SLAB.defaultBlockState() :
+                    HoneycombItem.WAX_OFF_BY_BLOCK.get().get(block).defaultBlockState();
             polyRegistry.registerBlockPoly(block, (input) -> {
-                if (input.get(SlabBlock.TYPE) == SlabType.DOUBLE) {
+                if (input.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
                     return regularFullBlock;
                 } else {
                     return slabReplacement
-                            .with(SlabBlock.TYPE, input.get(SlabBlock.TYPE))
-                            .with(SlabBlock.WATERLOGGED, input.get(SlabBlock.WATERLOGGED));
+                            .setValue(SlabBlock.TYPE, input.getValue(SlabBlock.TYPE))
+                            .setValue(SlabBlock.WATERLOGGED, input.getValue(SlabBlock.WATERLOGGED));
                 }
             });
         } else {
             polyRegistry.registerBlockPoly(block, (input) -> {
-                if (input.get(SlabBlock.TYPE) == SlabType.DOUBLE) {
+                if (input.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
                     return regularFullBlock;
                 }
                 return input;
@@ -251,12 +274,12 @@ public class BlockStateProfile {
     };
     private static final BiConsumer<Block,PolyRegistry> WATERLOGGED_SLAB_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, (input) -> {
         if (WATERLOGGED_SLAB_FILTER.test(input)) {
-            return input.with(SlabBlock.WATERLOGGED, false);
+            return input.setValue(SlabBlock.WATERLOGGED, false);
         }
         return input;
     });
-    private static final BiConsumer<Block,PolyRegistry> CHORUS_PLANT_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new ConditionalSimpleBlockPoly(Blocks.CHORUS_PLANT.getDefaultState(), CHORUS_PLANT_FILTER));
-    private static final BiConsumer<Block,PolyRegistry> CHORUS_FLOWER_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new ConditionalSimpleBlockPoly(Blocks.CHORUS_FLOWER.getDefaultState(), CHORUS_FLOWER_FILTER));
+    private static final BiConsumer<Block,PolyRegistry> CHORUS_PLANT_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new ConditionalSimpleBlockPoly(Blocks.CHORUS_PLANT.defaultBlockState(), CHORUS_PLANT_FILTER));
+    private static final BiConsumer<Block,PolyRegistry> CHORUS_FLOWER_ON_FIRST_REGISTER = (block, polyRegistry) -> polyRegistry.registerBlockPoly(block, new ConditionalSimpleBlockPoly(Blocks.CHORUS_FLOWER.defaultBlockState(), CHORUS_FLOWER_FILTER));
 
     ////////////////////
     //  SUB PROFILES  //
@@ -358,17 +381,17 @@ public class BlockStateProfile {
     }
 
     private static boolean isStringUseable(BlockState state) {
-        return  state.get(Properties.POWERED) == true ||
-                state.get(TripwireBlock.DISARMED) == true;
+        return  state.getValue(BlockStateProperties.POWERED) == true ||
+                state.getValue(TripWireBlock.DISARMED) == true;
     }
 
     private static BlockState getDoorCannonState(BlockState input) {
-        input = input.with(Properties.POWERED, false);
-        var facing = input.get(DoorBlock.FACING);
+        input = input.setValue(BlockStateProperties.POWERED, false);
+        var facing = input.getValue(DoorBlock.FACING);
         if (facing == Direction.WEST || facing == Direction.EAST) {
             // West and east are reserved for modded. Let's transform them into a south/north equivalent
-            var hinge = input.get(DoorBlock.HINGE);
-            input = input.with(DoorBlock.FACING, (hinge == DoorHinge.RIGHT ^ facing == Direction.WEST) ? Direction.NORTH : Direction.SOUTH);
+            var hinge = input.getValue(DoorBlock.HINGE);
+            input = input.setValue(DoorBlock.FACING, (hinge == DoorHingeSide.RIGHT ^ facing == Direction.WEST) ? Direction.NORTH : Direction.SOUTH);
             input = input.cycle(DoorBlock.HINGE);
             input = input.cycle(DoorBlock.OPEN);
         }
@@ -385,7 +408,7 @@ public class BlockStateProfile {
      * @author   Jelle De Loecker   <jelle@elevenways.be>
      */
     public static boolean hasBooleanDirection(BlockState state, Direction direction) {
-        BooleanProperty booleanProperty = ConnectingBlock.FACING_PROPERTIES.get(direction);
-        return state.contains(booleanProperty) && state.get(booleanProperty);
+        BooleanProperty booleanProperty = PipeBlock.PROPERTY_BY_DIRECTION.get(direction);
+        return state.hasProperty(booleanProperty) && state.getValue(booleanProperty);
     }
 }

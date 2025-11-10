@@ -1,11 +1,11 @@
 package io.github.theepicblock.polymc.mixins.entity;
 
-import net.minecraft.entity.data.DataTracker;
+import net.minecraft.network.syncher.SynchedEntityData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(DataTracker.class)
+@Mixin(SynchedEntityData.class)
 public interface DataTrackerAccessor {
     @Accessor
-    DataTracker.Entry<?>[] getEntries();
+    SynchedEntityData.DataItem<?>[] getItemsById();
 }

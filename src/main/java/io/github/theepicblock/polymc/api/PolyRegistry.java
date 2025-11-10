@@ -28,15 +28,14 @@ import io.github.theepicblock.polymc.api.item.ItemLocation;
 import io.github.theepicblock.polymc.api.item.ItemPoly;
 import io.github.theepicblock.polymc.api.item.ItemTransformer;
 import io.github.theepicblock.polymc.impl.PolyMapImpl;
-import net.minecraft.block.Block;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.server.network.ServerPlayerEntity;
-
 import java.util.*;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 
 /**
  * A class to register Polys.
@@ -49,7 +48,7 @@ public class PolyRegistry {
     protected final Map<Item,ItemPoly> itemPolys = new HashMap<>();
     protected final List<ItemTransformer> globalItemPolys = new ArrayList<>();
     protected final Map<Block,BlockPoly> blockPolys = new HashMap<>();
-    protected final Map<ScreenHandlerType<?>,GuiPoly> guiPolys = new HashMap<>();
+    protected final Map<MenuType<?>,GuiPoly> guiPolys = new HashMap<>();
     protected final Map<EntityType<?>,EntityPoly<?>> entityPolys = new HashMap<>();
 
     /**
@@ -62,7 +61,7 @@ public class PolyRegistry {
     }
 
     /**
-     * Registers a global item poly. This {@link ItemTransformer#transform(ItemStack, ServerPlayerEntity, ItemLocation)} shall be called for all items.
+     * Registers a global item poly. This {@link ItemTransformer#transform(ItemStack, ServerPlayer, ItemLocation)} shall be called for all items.
      * <p>
      * The order is dependent on the registration order. If it is registered earlier it'll be called earlier.
      * @param poly poly to register.
@@ -85,7 +84,7 @@ public class PolyRegistry {
      * @param screenHandler screen handler to associate poly with.
      * @param poly          poly to register.
      */
-    public void registerGuiPoly(ScreenHandlerType<?> screenHandler, GuiPoly poly) {
+    public void registerGuiPoly(MenuType<?> screenHandler, GuiPoly poly) {
         guiPolys.put(screenHandler, poly);
     }
 
@@ -121,7 +120,7 @@ public class PolyRegistry {
      * @param screenHandler screen handler to check.
      * @return True if a {@link GuiPoly} exists for the given screen handler.
      */
-    public boolean hasGuiPoly(ScreenHandlerType<?> screenHandler) {
+    public boolean hasGuiPoly(MenuType<?> screenHandler) {
         return guiPolys.containsKey(screenHandler);
     }
 

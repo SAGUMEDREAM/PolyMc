@@ -7,13 +7,12 @@ import io.github.theepicblock.polymc.api.wizard.Wizard;
 import io.github.theepicblock.polymc.api.wizard.WizardInfo;
 import io.github.theepicblock.polymc.impl.poly.wizard.EntityUtil;
 import io.github.theepicblock.polymc.mixins.wizards.EntityAccessor;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-
 import java.util.List;
 import java.util.Optional;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public class MissingEntityPoly<T extends Entity> implements EntityPoly<T> {
     @Override
@@ -44,8 +43,8 @@ public class MissingEntityPoly<T extends Entity> implements EntityPoly<T> {
             player.sendPacket(EntityUtil.createDataTrackerUpdate(
                     this.item.getId(),
                     List.of(
-                            new DataTracker.Entry<>(EntityAccessor.getCustomName(), Optional.of(this.getEntity().getName())),
-                            new DataTracker.Entry<>(EntityAccessor.getNameVisible(), true))
+                            new SynchedEntityData.DataItem<>(EntityAccessor.getCustomName(), Optional.of(this.getEntity().getName())),
+                            new SynchedEntityData.DataItem<>(EntityAccessor.getNameVisible(), true))
                     )
             );
         }

@@ -2,16 +2,15 @@ package io.github.theepicblock.polymc.impl.poly.wizard;
 
 import io.github.theepicblock.polymc.api.PolyMap;
 import io.github.theepicblock.polymc.api.misc.PolyMapProvider;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.server.network.ServerPlayerEntity;
-
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.level.ServerPlayer;
 
 public class CachedPolyMapFilteredPlayerView extends AbstractPacketConsumer {
-    private final List<ServerPlayerEntity> players;
+    private final List<ServerPlayer> players;
 
-    public CachedPolyMapFilteredPlayerView(List<ServerPlayerEntity> allPlayers, PolyMap filter) {
+    public CachedPolyMapFilteredPlayerView(List<ServerPlayer> allPlayers, PolyMap filter) {
         players = new ArrayList<>();
         allPlayers.forEach(player -> {
             if (PolyMapProvider.getPolyMap(player) == filter) {
@@ -23,7 +22,7 @@ public class CachedPolyMapFilteredPlayerView extends AbstractPacketConsumer {
     @Override
     public void sendPacket(Packet<?> packet) {
         for (var player : players) {
-            player.networkHandler.sendPacket(packet);
+            player.connection.send(packet);
         }
     }
 }

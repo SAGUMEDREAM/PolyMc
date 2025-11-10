@@ -5,9 +5,6 @@ import com.mojang.serialization.Codec;
 import eu.pb4.polymer.common.api.PolymerCommonUtils;
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.mixin.ItemLocationStaticHack;
-import net.minecraft.enchantment.effect.AllOfEnchantmentEffects;
-import net.minecraft.enchantment.effect.EnchantmentLocationBasedEffect;
-import net.minecraft.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
@@ -16,6 +13,8 @@ import xyz.nucleoid.packettweaker.PacketContext;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.minecraft.world.item.enchantment.effects.AllOf;
+import net.minecraft.world.item.enchantment.effects.EnchantmentLocationBasedEffect;
 
 @Mixin(EnchantmentLocationBasedEffect.class)
 public interface EnchantmentLocationBasedEffectMixin {
@@ -28,7 +27,7 @@ public interface EnchantmentLocationBasedEffectMixin {
                     return content;
                 }
                 var map = Util.tryGetPolyMap(ctx);
-                return map.canReceiveEnchantmentLocationBasedEffect(content) ? content : new AllOfEnchantmentEffects.LocationBasedEffects(List.of());
+                return map.canReceiveEnchantmentLocationBasedEffect(content) ? content : new AllOf.LocationBasedEffects(List.of());
             }
             return content;
         });

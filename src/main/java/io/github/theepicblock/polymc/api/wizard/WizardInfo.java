@@ -1,17 +1,17 @@
 package io.github.theepicblock.polymc.api.wizard;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface WizardInfo {
-    @NotNull Vec3d getPosition();
+    @NotNull Vec3 getPosition();
 
-    @NotNull Vec3d getPosition(UpdateInfo info);
+    @NotNull Vec3 getPosition(UpdateInfo info);
 
     @Nullable BlockPos getBlockPos();
 
@@ -19,5 +19,5 @@ public interface WizardInfo {
 
     @Nullable BlockEntity getBlockEntity();
 
-    @Nullable ServerWorld getWorld();
+    @Nullable ServerLevel getWorld();
 }

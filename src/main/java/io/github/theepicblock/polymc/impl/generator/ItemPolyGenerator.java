@@ -24,11 +24,23 @@ import io.github.theepicblock.polymc.api.item.ItemPoly;
 import io.github.theepicblock.polymc.common.BlockItemType;
 import io.github.theepicblock.polymc.impl.ConfigManager;
 import io.github.theepicblock.polymc.impl.poly.item.*;
-import net.minecraft.block.Block;
-import net.minecraft.item.*;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BrushItem;
+import net.minecraft.world.item.CompassItem;
+import net.minecraft.world.item.CrossbowItem;
+import net.minecraft.world.item.FishingRodItem;
+import net.minecraft.world.item.HoeItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.ShieldItem;
+import net.minecraft.world.item.ShovelItem;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * Class to automatically generate {@link ItemPoly}s for {@link Item}s
@@ -64,7 +76,7 @@ public class ItemPolyGenerator {
         if (item instanceof CrossbowItem) {
             return new SimpleItemPoly(Items.CROSSBOW);
         }
-        if (item instanceof RangedWeaponItem && item.getMaxUseTime(new ItemStack(item), null) != 0) {
+        if (item instanceof ProjectileWeaponItem && item.getUseDuration(new ItemStack(item), null) != 0) {
             return new SimpleItemPoly(Items.BOW);
         }
         if (item instanceof BlockItem blockItem) {
@@ -95,22 +107,22 @@ public class ItemPolyGenerator {
 
     /**
      * Attempts to create the best possible {@link ItemPoly} for a {@link BlockItem}.
-     * Amongst other factors, this decision might be influenced by the placement logic and the placement sound of the source {@link BlockItem} and the {@link net.minecraft.block.Block} that's attached to it.
+     * Amongst other factors, this decision might be influenced by the placement logic and the placement sound of the source {@link BlockItem} and the {@link net.minecraft.world.level.block.Block} that's attached to it.
      */
     private static Item[] getBestVanillaItemsForBlockItem(BlockItem item) {
         var block = item.getBlock();
-        var fakeWorld = new BlockPolyGenerator.FakedWorld(block.getDefaultState());
+        var fakeWorld = new BlockPolyGenerator.FakedWorld(block.defaultBlockState());
 
         //Get the state's collision shape.
         VoxelShape collisionShape;
         try {
-            collisionShape = block.getDefaultState().getCollisionShape(fakeWorld, BlockPos.ORIGIN);
+            collisionShape = block.defaultBlockState().getCollisionShape(fakeWorld, BlockPos.ZERO);
         } catch (Exception e) {
-            PolyMc.LOGGER.warn("Failed to get collision shape for " + block.getDefaultState().toString());
+            PolyMc.LOGGER.warn("Failed to get collision shape for " + block.defaultBlockState().toString());
             e.printStackTrace();
-            collisionShape = VoxelShapes.UNBOUNDED;
+            collisionShape = Shapes.INFINITY;
         }
-        if (Block.isShapeFullCube(collisionShape)) {
+        if (Block.isShapeFullBlock(collisionShape)) {
             return CustomModelDataManager.FULL_BLOCK_ITEMS;
         } else {
             return CustomModelDataManager.BLOCK_ITEMS;
@@ -126,7 +138,7 @@ public class ItemPolyGenerator {
         try {
             builder.registerItemPoly(item, generatePoly(item, builder));
         } catch (Exception e) {
-            PolyMc.LOGGER.error("Failed to generate a poly for item " + item.getTranslationKey());
+            PolyMc.LOGGER.error("Failed to generate a poly for item " + item.getDescriptionId());
             e.printStackTrace();
             PolyMc.LOGGER.error("Attempting to recover by using a default poly. Please report this");
             builder.registerItemPoly(item, (input, player, location) -> new ItemStack(Items.BARRIER));

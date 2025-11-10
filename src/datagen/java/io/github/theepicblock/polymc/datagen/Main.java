@@ -2,11 +2,11 @@ package io.github.theepicblock.polymc.datagen;
 
 import io.netty.buffer.Unpooled;
 import net.fabricmc.api.ModInitializer;
-import net.minecraft.block.Block;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.properties.Property;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,22 +26,22 @@ public class Main implements ModInitializer {
             File outputDir = new File(output);
             outputDir.mkdirs();
 
-            PacketByteBuf outBuf = new PacketByteBuf(Unpooled.buffer());
+            FriendlyByteBuf outBuf = new FriendlyByteBuf(Unpooled.buffer());
             File outputFile = new File(outputDir, "block-ids");
             LOGGER.info("Vanilla ids: "+outputFile.toPath().toAbsolutePath());
 
             var properties = new HashSet<Property<?>>();
-            for (var block : Registries.BLOCK) {
-                properties.addAll(block.getDefaultState().getProperties());
+            for (var block : BuiltInRegistries.BLOCK) {
+                properties.addAll(block.defaultBlockState().getProperties());
             }
 
             var propertyTable = new PropertyLookupTable(properties);
 
             propertyTable.write(outBuf);
 
-            outBuf.writeVarInt(Block.STATE_IDS.size());
-            outBuf.writeVarInt(Registries.BLOCK.size());
-            for (var block : Registries.BLOCK) {
+            outBuf.writeVarInt(Block.BLOCK_STATE_REGISTRY.size());
+            outBuf.writeVarInt(BuiltInRegistries.BLOCK.size());
+            for (var block : BuiltInRegistries.BLOCK) {
                 writeBlock(block, propertyTable, outBuf);
             }
 
@@ -57,39 +57,39 @@ public class Main implements ModInitializer {
         }
     }
 
-    private static void writeBlock(Block block, PropertyLookupTable table, PacketByteBuf buf) {
-        Identifier id = Registries.BLOCK.getId(block);
+    private static void writeBlock(Block block, PropertyLookupTable table, FriendlyByteBuf buf) {
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
         if (!id.getNamespace().equals("minecraft")) {
             // This is supposed to be a list with vanilla ids, no modded allowed
             throw new AssertionError("Non-mc block detected: "+id);
         }
 
         // Write block id
-        buf.writeString(id.getPath());
+        buf.writeUtf(id.getPath());
 
         // Write property types
-        var properties = block.getStateManager().getProperties();
+        var properties = block.defaultBlockState().getProperties();
         buf.writeCollection(properties, (byteBuf, property) -> {
             byteBuf.writeVarInt(table.getPropertyId(property));
         });
 
 
-        var states = block.getStateManager().getStates();
+        var states = block.getStateDefinition().getPossibleStates();
         // Write first id
-        buf.writeVarInt(Block.getRawIdFromState(states.get(0)));
-        var lastId = Block.getRawIdFromState(states.get(0))-1;
+        buf.writeVarInt(Block.getId(states.get(0)));
+        var lastId = Block.getId(states.get(0))-1;
 
         buf.writeVarInt(states.size());
         for (var state : states) {
             // Write its property values
             for (var property : properties) {
-                buf.writeVarInt(table.getValueId(property, state.get(property)));
+                buf.writeVarInt(table.getValueId(property, state.getValue(property)));
             }
             // And finally, write the correct id for it
-            if (lastId+1 != Block.getRawIdFromState(state)) {
+            if (lastId+1 != Block.getId(state)) {
                 throw new AssertionError("Unordered id's!");
             }
-            lastId = Block.getRawIdFromState(state);
+            lastId = Block.getId(state);
         }
     }
 

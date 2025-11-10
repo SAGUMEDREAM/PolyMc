@@ -1,8 +1,8 @@
 package io.github.theepicblock.polymc.api.item;
 
 import io.github.theepicblock.polymc.api.PolyMap;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -20,17 +20,17 @@ public interface ItemTransformer {
      * @return The {@link ItemStack} that should be sent to the client.
      * @apiNote this method should never edit the incoming ItemStack. As that might have unspecified consequences for the actual serverside representation of the item.
      */
-    default ItemStack transform(ItemStack original, ItemStack input, PolyMap polyMap, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location) {
+    default ItemStack transform(ItemStack original, ItemStack input, PolyMap polyMap, @Nullable ServerPlayer player, @Nullable ItemLocation location) {
         return transform(original, input, player, location);
     }
 
     @Deprecated
-    default ItemStack transform(ItemStack original, ItemStack input, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location) {
+    default ItemStack transform(ItemStack original, ItemStack input, @Nullable ServerPlayer player, @Nullable ItemLocation location) {
         return transform(input, player, location);
     }
 
     @Deprecated
-    default ItemStack transform(ItemStack input, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location) {
+    default ItemStack transform(ItemStack input, @Nullable ServerPlayer player, @Nullable ItemLocation location) {
         return input;
     }
 }

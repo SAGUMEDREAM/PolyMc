@@ -1,20 +1,20 @@
 package io.github.theepicblock.polymc.mixins.wizards;
 
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.decoration.ItemFrameEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(ItemFrameEntity.class)
+@Mixin(ItemFrame.class)
 public interface ItemFrameEntityAccessor {
-    @Accessor(value = "ITEM_STACK")
-    static TrackedData<ItemStack> getItemStackTracker() {
+    @Accessor(value = "DATA_ITEM")
+    static EntityDataAccessor<ItemStack> getItemStackTracker() {
         throw new IllegalStateException();
     }
 
-    @Accessor(value = "ROTATION")
-    static TrackedData<Integer> getRotationTracker() {
+    @Accessor(value = "DATA_ROTATION")
+    static EntityDataAccessor<Integer> getRotationTracker() {
         throw new IllegalStateException();
     }
 }

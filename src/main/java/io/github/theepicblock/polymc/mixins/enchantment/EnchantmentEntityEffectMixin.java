@@ -4,9 +4,6 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.mojang.serialization.Codec;
 import eu.pb4.polymer.common.api.PolymerCommonUtils;
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.enchantment.effect.AllOfEnchantmentEffects;
-import net.minecraft.enchantment.effect.EnchantmentEntityEffect;
-import net.minecraft.enchantment.effect.EnchantmentLocationBasedEffect;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import xyz.nucleoid.packettweaker.PacketContext;
@@ -14,6 +11,8 @@ import xyz.nucleoid.packettweaker.PacketContext;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import net.minecraft.world.item.enchantment.effects.AllOf;
+import net.minecraft.world.item.enchantment.effects.EnchantmentEntityEffect;
 
 @Mixin(EnchantmentEntityEffect.class)
 public interface EnchantmentEntityEffectMixin {
@@ -26,7 +25,7 @@ public interface EnchantmentEntityEffectMixin {
                     return content;
                 }
                 var map = Util.tryGetPolyMap(ctx);
-                return map.canReceiveEnchantmentLocationBasedEffect(content) ? content : new AllOfEnchantmentEffects.EntityEffects(List.of());
+                return map.canReceiveEnchantmentLocationBasedEffect(content) ? content : new AllOf.EntityEffects(List.of());
             }
             return content;
         });

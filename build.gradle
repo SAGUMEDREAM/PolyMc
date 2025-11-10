@@ -1,13 +1,15 @@
 plugins {
-	id 'fabric-loom' version '1.10.+'
+	id 'fabric-loom' version '1.13-SNAPSHOT'
 	id 'maven-publish'
 	id 'org.ajoberstar.grgit' version '5.2.2'
 }
 
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
 
-archivesBaseName = project.archives_base_name
+def archivesBaseName = project.archives_base_name
 version = "${project.mod_version}${getVersionMetadata()}+${project.minecraft_version}"
 group = project.maven_group
 
@@ -58,7 +60,7 @@ repositories {
 dependencies {
 	//to change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation("net.fabricmc.fabric-api:fabric-api:${project.fabric_version}") {
 		exclude group: 'net.fabricmc', module: 'fabric-loader'

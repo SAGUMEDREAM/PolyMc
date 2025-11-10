@@ -4,16 +4,15 @@ import io.github.theepicblock.polymc.PolyMc;
 import io.github.theepicblock.polymc.impl.mixin.BlockStateDuck;
 import io.github.theepicblock.polymc.mixins.block.IdListAccessor;
 import io.netty.buffer.Unpooled;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
-import net.minecraft.state.property.Property;
-import net.minecraft.util.Identifier;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Property;
 
 public class BlockIdRemapper {
     public static void remapFromInternalList() {
@@ -31,7 +30,7 @@ public class BlockIdRemapper {
     private static List<BlockState> readInternalList() throws IOException {
         var blob = PolyMc.class.getResourceAsStream("/block-ids").readAllBytes();
 
-        var buf = new PacketByteBuf(Unpooled.wrappedBuffer(blob));
+        var buf = new FriendlyByteBuf(Unpooled.wrappedBuffer(blob));
 
         var propertyLookupTable = new PropertyLookupTable(buf);
 
@@ -44,12 +43,12 @@ public class BlockIdRemapper {
         return List.of(vanillaBlocks);
     }
 
-    private static void readBlock(PacketByteBuf buf, PropertyLookupTable table, BlockState[] outputList) {
-        var path = buf.readString();
-        var id = Identifier.of(path);
-        Block block = Registries.BLOCK.get(id);
+    private static void readBlock(FriendlyByteBuf buf, PropertyLookupTable table, BlockState[] outputList) {
+        var path = buf.readUtf();
+        var id = ResourceLocation.parse(path);
+        Block block = BuiltInRegistries.BLOCK.getValue(id);
 
-        var baseState = block.getDefaultState();
+        var baseState = block.defaultBlockState();
 
         var properties = buf.readCollection(ArrayList::new,
                 (buf0) -> table.getProperty(buf.readVarInt(), block));
@@ -72,14 +71,14 @@ public class BlockIdRemapper {
     }
 
     private static <T extends Comparable<T>, V extends T> BlockState blockStateWith(BlockState state, Property<T> property, Object value) {
-        return state.with(property, (V)value);
+        return state.setValue(property, (V)value);
     }
 
     private static void remapBlocks(List<BlockState> vanillaBlocks) {
-        var accessor = (IdListAccessor<BlockState>)Block.STATE_IDS;
+        var accessor = (IdListAccessor<BlockState>)Block.BLOCK_STATE_REGISTRY;
 
-        var blockList = accessor.getList();
-        var idMap = accessor.getIdMap();
+        var blockList = accessor.getIdToT();
+        var idMap = accessor.getTToId();
 
         var blockListCopy = List.copyOf(blockList);
         blockList.clear();

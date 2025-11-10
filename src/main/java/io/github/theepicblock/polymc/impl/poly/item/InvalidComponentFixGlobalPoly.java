@@ -5,13 +5,13 @@ import io.github.theepicblock.polymc.api.item.ItemLocation;
 import io.github.theepicblock.polymc.api.item.ItemTransformer;
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.mixin.TransformingComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 public class InvalidComponentFixGlobalPoly implements ItemTransformer {
     @Override
-    public ItemStack transform(ItemStack original, ItemStack input, PolyMap map, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location) {
+    public ItemStack transform(ItemStack original, ItemStack input, PolyMap map, @Nullable ServerPlayer player, @Nullable ItemLocation location) {
         for (var comp : input.getComponents()) {
             if (!map.canReceiveDataComponentType(comp.type())
                     || (comp.value() instanceof TransformingComponent t

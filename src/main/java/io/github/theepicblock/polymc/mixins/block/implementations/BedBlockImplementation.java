@@ -19,13 +19,13 @@ package io.github.theepicblock.polymc.mixins.block.implementations;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import io.github.theepicblock.polymc.impl.mixin.PacketReplacementUtil;
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.enums.BedPart;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -35,25 +35,25 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 /**
- * In the {@link BedBlock#onBreak(World, BlockPos, BlockState, PlayerEntity)} method, there is a call to create a WorldEvent for the breakage.
+ * In the {@link BedBlock#playerWillDestroy(Level, BlockPos, BlockState, Player)} method, there is a call to create a WorldEvent for the breakage.
  */
 @Mixin(BedBlock.class)
 public class BedBlockImplementation {
     /**
-     * Removes the call to {@link World#syncWorldEvent(PlayerEntity, int, BlockPos, int)} so it can be replaced
-     * @see #worldEventReplacement(World, BlockPos, BlockState, PlayerEntity, CallbackInfo, BedPart, BlockPos, BlockState)
+     * Removes the call to {@link Level#levelEvent(Player, int, BlockPos, int)} so it can be replaced
+     * @see #worldEventReplacement(Level, BlockPos, BlockState, Player, CallbackInfo, BedPart, BlockPos, BlockState)
      */
-    @Redirect(method = "onBreak", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;syncWorldEvent(Lnet/minecraft/entity/Entity;ILnet/minecraft/util/math/BlockPos;I)V"))
-    public void worldEventDisabler(World instance, Entity entity, int i, BlockPos pos, int i2) {
+    @Redirect(method = "playerWillDestroy", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;levelEvent(Lnet/minecraft/world/entity/Entity;ILnet/minecraft/core/BlockPos;I)V"))
+    public void worldEventDisabler(Level instance, Entity entity, int i, BlockPos pos, int i2) {
         //Disabled
     }
 
     /**
-     * Replaces the call to {@link World#syncWorldEvent(PlayerEntity, int, BlockPos, int)} with a call to {@link PacketReplacementUtil#syncWorldEvent(World, PlayerEntity, int, BlockPos, BlockState)}
+     * Replaces the call to {@link Level#levelEvent(Player, int, BlockPos, int)} with a call to {@link PacketReplacementUtil#syncWorldEvent(Level, Player, int, BlockPos, BlockState)}
      * to respect different PolyMaps
      */
-    @Inject(method = "onBreak", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;syncWorldEvent(Lnet/minecraft/entity/Entity;ILnet/minecraft/util/math/BlockPos;I)V"))
-    public void worldEventReplacement(World world, BlockPos pos, BlockState state, PlayerEntity player, CallbackInfoReturnable<BlockState> cir, @Local(ordinal = 1) BlockPos bedPos, @Local(ordinal = 1) BlockState bedState) {
+    @Inject(method = "playerWillDestroy", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/Level;levelEvent(Lnet/minecraft/world/entity/Entity;ILnet/minecraft/core/BlockPos;I)V"))
+    public void worldEventReplacement(Level world, BlockPos pos, BlockState state, Player player, CallbackInfoReturnable<BlockState> cir, @Local(ordinal = 1) BlockPos bedPos, @Local(ordinal = 1) BlockState bedState) {
         PacketReplacementUtil.syncWorldEvent(world, player, 2001, bedPos, bedState);
     }
 }

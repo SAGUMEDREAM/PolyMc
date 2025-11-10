@@ -20,17 +20,17 @@ package io.github.theepicblock.polymc.mixins.block.implementations;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import eu.pb4.polymer.common.api.PolymerCommonUtils;
-import net.minecraft.server.network.ChunkDataSender;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.network.PlayerChunkSender;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
+import net.minecraft.world.level.chunk.LevelChunk;
 import org.spongepowered.asm.mixin.Mixin;
 
-@Mixin(ChunkDataSender.class)
+@Mixin(PlayerChunkSender.class)
 public class ChunkDataPlayerProvider {
 
-    @WrapMethod(method = "sendChunkData")
-    private static void setPlayerContext(ServerPlayNetworkHandler handler, ServerWorld world, WorldChunk chunk, Operation<Void> original) {
+    @WrapMethod(method = "sendChunk")
+    private static void setPlayerContext(ServerGamePacketListenerImpl handler, ServerLevel world, LevelChunk chunk, Operation<Void> original) {
         PolymerCommonUtils.executeWithNetworkingLogic(handler, () -> original.call(handler, world, chunk));
     }
 }

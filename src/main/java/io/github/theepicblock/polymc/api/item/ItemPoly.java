@@ -21,9 +21,9 @@ import io.github.theepicblock.polymc.api.DebugInfoProvider;
 import io.github.theepicblock.polymc.api.resource.ModdedResources;
 import io.github.theepicblock.polymc.api.resource.PolyMcResourcePack;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 public interface ItemPoly extends DebugInfoProvider<Item> {
@@ -35,7 +35,7 @@ public interface ItemPoly extends DebugInfoProvider<Item> {
      * @return The {@link ItemStack} that should be sent to the client.
      * @apiNote this method should never edit the incoming ItemStack. As that might have unspecified consequences for the actual serverside representation of the item.
      */
-    ItemStack getClientItem(ItemStack input, @Nullable ServerPlayerEntity player, @Nullable ItemLocation location);
+    ItemStack getClientItem(ItemStack input, @Nullable ServerPlayer player, @Nullable ItemLocation location);
 
     /**
      * Callback to add all resources needed for this item to a resource pack.

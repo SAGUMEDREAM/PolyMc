@@ -20,14 +20,14 @@ package io.github.theepicblock.polymc.impl.misc;
 import io.github.theepicblock.polymc.api.PolyMap;
 import io.github.theepicblock.polymc.api.block.BlockPoly;
 import io.github.theepicblock.polymc.impl.Util;
-import net.minecraft.block.*;
-import net.minecraft.block.enums.DoubleBlockHalf;
-import net.minecraft.network.packet.s2c.play.BlockUpdateS2CPacket;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import java.util.Collection;
 import java.util.HashSet;
 
@@ -40,15 +40,15 @@ public class BlockResyncManager {
 
     private static final Direction[] ALL_DIRECTIONS = Direction.values();
 
-    public static void onBlockUpdate(BlockState sourceState, BlockPos sourcePos, World world, ServerPlayerEntity player, Collection<BlockPos> checkedBlocks) {
+    public static void onBlockUpdate(BlockState sourceState, BlockPos sourcePos, Level world, ServerPlayer player, Collection<BlockPos> checkedBlocks) {
         if (checkedBlocks == null) checkedBlocks = new HashSet<>();
         PolyMap map = Util.tryGetPolyMap(player);
         onBlockUpdate(sourceState, sourcePos, world, player, checkedBlocks, map);
     }
 
-    private static void onBlockUpdate(BlockState sourceState, BlockPos sourcePos, World world, ServerPlayerEntity player, Collection<BlockPos> checkedBlocks, PolyMap map) {
+    private static void onBlockUpdate(BlockState sourceState, BlockPos sourcePos, Level world, ServerPlayer player, Collection<BlockPos> checkedBlocks, PolyMap map) {
 
-        BlockPos.Mutable pos = new BlockPos.Mutable();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         checkedBlocks.add(sourcePos);
 
         // Huge chunks of modded blocks can cause lag and even a stack overflow,
@@ -60,8 +60,8 @@ public class BlockResyncManager {
         // Check all the adjacent blocks
         for (Direction direction : ALL_DIRECTIONS) {
 
-            pos.set(sourcePos.getX() + direction.getOffsetX(), sourcePos.getY() + direction.getOffsetY(), sourcePos.getZ() + direction.getOffsetZ());
-            BlockPos newPos = pos.toImmutable();
+            pos.set(sourcePos.getX() + direction.getStepX(), sourcePos.getY() + direction.getStepY(), sourcePos.getZ() + direction.getStepZ());
+            BlockPos newPos = pos.immutable();
 
             // Make sure no blocks get checked twice
             if (checkedBlocks.contains(newPos)) {
@@ -92,14 +92,14 @@ public class BlockResyncManager {
                 }
 
                 if (map.shouldForceBlockStateSync(sourceState, adjacentClientState, direction)) {
-                    player.networkHandler.sendPacket(new BlockUpdateS2CPacket(newPos, adjacentState));
+                    player.connection.send(new ClientboundBlockUpdatePacket(newPos, adjacentState));
                     checkedBlocks.add(sourcePos);
                     onBlockUpdate(adjacentClientState, newPos, world, player, checkedBlocks, map);
                 }
             }
 
             // If the lower half of a door is interacted with, we should check the upper half as well
-            boolean isUpperDoor = direction == Direction.UP && adjacentState.getBlock() instanceof DoorBlock && adjacentState.get(DoorBlock.HALF) == DoubleBlockHalf.UPPER;
+            boolean isUpperDoor = direction == Direction.UP && adjacentState.getBlock() instanceof DoorBlock && adjacentState.getValue(DoorBlock.HALF) == DoubleBlockHalf.UPPER;
             if (isUpperDoor) {
                 checkedBlocks.add(sourcePos);
                 onBlockUpdate(null, pos, world, player, checkedBlocks, map);

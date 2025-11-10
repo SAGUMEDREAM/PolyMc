@@ -27,14 +27,13 @@ import io.github.theepicblock.polymc.api.resource.PolyMcResourcePack;
 import io.github.theepicblock.polymc.impl.Util;
 import io.github.theepicblock.polymc.impl.misc.BooleanContainer;
 import io.github.theepicblock.polymc.impl.misc.logging.SimpleLogger;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.Registries;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.function.BiFunction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 /**
  * This poly uses a {@link BlockStateMerger} to merge {@link BlockState}s into groups and then calls a function to get the corresponding client {@link BlockState} for this group.
@@ -68,7 +67,7 @@ public class FunctionBlockStatePoly implements BlockPoly {
         // Ofc, you might not want leaves to be grouped this way if you have different models for them,
         // that's why the BlockStateMerger can be swapped out with a different one
         Multimap<BlockState, BlockState> moddedStateGroups = LinkedHashMultimap.create();
-        for (var moddedState : moddedBlock.getStateManager().getStates()) {
+        for (var moddedState : moddedBlock.getStateDefinition().getPossibleStates()) {
             moddedStateGroups.put(merger.normalize(moddedState), moddedState);
         }
 
@@ -95,7 +94,7 @@ public class FunctionBlockStatePoly implements BlockPoly {
 
     @Override
     public void addToResourcePack(Block block, ModdedResources moddedResources, PolyMcResourcePack pack, SimpleLogger logger) {
-        var moddedBlockId = Registries.BLOCK.getId(block);
+        var moddedBlockId = BuiltInRegistries.BLOCK.getKey(block);
         // Read the modded block state file. This tells us which model is used for which block state
         var moddedBlockState = moddedResources.getBlockState(moddedBlockId.getNamespace(), moddedBlockId.getPath());
         if (moddedBlockState == null) {
@@ -109,7 +108,7 @@ public class FunctionBlockStatePoly implements BlockPoly {
             if (clientStatesDone.contains(clientState)) return;
             if (!uniqueClientBlocks.contains(clientState)) return;
 
-            var clientBlockId = Registries.BLOCK.getId(clientState.getBlock());
+            var clientBlockId = BuiltInRegistries.BLOCK.getKey(clientState.getBlock());
             var clientBlockStates = pack.getOrDefaultBlockState(clientBlockId.getNamespace(), clientBlockId.getPath());
             var clientStateString = Util.getPropertiesFromBlockState(clientState);
 

@@ -17,10 +17,10 @@
  */
 package io.github.theepicblock.polymc.impl.mixin;
 
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 public interface NonPolydPacketProvider {
-    void toPacketNoPoly(PacketByteBuf buf);
+    void toPacketNoPoly(FriendlyByteBuf buf);
 
     int getPacketSizeNoPoly();
 }

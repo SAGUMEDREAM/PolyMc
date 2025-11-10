@@ -9,19 +9,19 @@ import io.github.theepicblock.polymc.mixins.wizards.block.WorldChunkMixin;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectArrayMap;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.ChunkPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 
 /**
  * See {@link io.github.theepicblock.polymc.PolyMc} and {@link ThreadedWizardUpdater} for where these are ticked from
  * See {@link WorldChunkMixin} for where the wizards are put into the list
  */
-@Mixin(ServerWorld.class)
+@Mixin(ServerLevel.class)
 public class WorldMixin implements WizardTickerDuck {
     @Unique
     private final Map<PolyMap, Map<ChunkPos, List<Wizard>>> blockTickers = new Reference2ObjectArrayMap<>();

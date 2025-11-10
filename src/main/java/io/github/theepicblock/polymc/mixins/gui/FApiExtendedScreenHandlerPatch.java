@@ -20,9 +20,9 @@ package io.github.theepicblock.polymc.mixins.gui;
 import io.github.theepicblock.polymc.impl.Util;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.fabricmc.fabric.impl.screenhandler.Networking;
-import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -34,9 +34,9 @@ public class FApiExtendedScreenHandlerPatch {
      * @reason The vanilla client can't understand the custom packet
      */
     @Inject(method = "sendOpenPacket", at = @At("HEAD"), cancellable = true, remap = false)
-    private static void sendOpenPacket(ServerPlayerEntity player, ExtendedScreenHandlerFactory factory, ScreenHandler handler, int syncId, CallbackInfo ci) {
+    private static void sendOpenPacket(ServerPlayer player, ExtendedScreenHandlerFactory factory, AbstractContainerMenu handler, int syncId, CallbackInfo ci) {
         if (Util.isPolyMapVanillaLike(player)) {
-            player.networkHandler.sendPacket(new OpenScreenS2CPacket(syncId, handler.getType(), factory.getDisplayName()));
+            player.connection.send(new ClientboundOpenScreenPacket(syncId, handler.getType(), factory.getDisplayName()));
             ci.cancel();
         }
     }

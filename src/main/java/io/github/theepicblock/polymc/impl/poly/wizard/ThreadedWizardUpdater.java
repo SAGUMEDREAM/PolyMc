@@ -9,20 +9,20 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.thread.ReentrantThreadExecutor;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.thread.ReentrantBlockableEventLoop;
+import net.minecraft.world.level.ChunkPos;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.lang.annotation.*;
 import java.util.Set;
 
-public class ThreadedWizardUpdater extends ReentrantThreadExecutor<Runnable> {
+public class ThreadedWizardUpdater extends ReentrantBlockableEventLoop<Runnable> {
     public static ThreadedWizardUpdater MAIN = null;
     private static final int MILLIS_PER_TICK = 1000/60;
 
     private final MinecraftServer server;
-    public final Set<ServerWorld> worlds = new ObjectArraySet<>();
+    public final Set<ServerLevel> worlds = new ObjectArraySet<>();
     private final Thread myThread = new Thread(this::runTickLoop);
     private boolean shouldStop = false;
     private volatile int tickTime = 0;
@@ -57,7 +57,7 @@ public class ThreadedWizardUpdater extends ReentrantThreadExecutor<Runnable> {
 
         ServerTickEvents.START_SERVER_TICK.register(server -> {
             if (MAIN == null) return;
-            MAIN.tickTime = server.getTicks();
+            MAIN.tickTime = server.getTickCount();
             MAIN.tickStart = System.nanoTime();
         });
 
@@ -76,7 +76,7 @@ public class ThreadedWizardUpdater extends ReentrantThreadExecutor<Runnable> {
 
     public void start() {
         // Ran on the main thread
-        server.getWorlds().forEach(this.worlds::add);
+        server.getAllLevels().forEach(this.worlds::add);
         myThread.setDaemon(true);
         myThread.setName("PolyMc wizard updater");
         myThread.start();
@@ -95,7 +95,7 @@ public class ThreadedWizardUpdater extends ReentrantThreadExecutor<Runnable> {
         // This is the entrypoint into the thread
         PolyMc.LOGGER.info("Started wizard updating thread");
         while (true) {
-            this.runTasks();
+            this.runAllTasks();
             if (shouldStop) {
                 return;
             }
@@ -131,17 +131,17 @@ public class ThreadedWizardUpdater extends ReentrantThreadExecutor<Runnable> {
     }
 
     @Override
-    protected boolean canExecute(Runnable task) {
+    protected boolean shouldRun(Runnable task) {
         return true;
     }
 
     @Override
-    protected Thread getThread() {
+    protected Thread getRunningThread() {
         return myThread;
     }
 
     @Override
-    public Runnable createTask(Runnable runnable) {
+    public Runnable wrapRunnable(Runnable runnable) {
         return runnable;
     }
 

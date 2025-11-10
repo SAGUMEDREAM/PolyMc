@@ -2,8 +2,8 @@ package io.github.theepicblock.polymc.impl.poly.wizard;
 
 import io.github.theepicblock.polymc.PolyMc;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.network.packet.s2c.play.EntityPositionS2CPacket;
-import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
+import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
@@ -42,17 +42,17 @@ public class UnsafeEntityUtil {
             f.setAccessible(true);
             unsafe = (Unsafe)f.get(null);
 
-            epos_id = tryGet(EntityPositionS2CPacket.class, "field_12705", "I");
-            epos_x = tryGet(EntityPositionS2CPacket.class, "field_12703", "D");
-            epos_y = tryGet(EntityPositionS2CPacket.class, "field_12702", "D");
-            epos_z = tryGet(EntityPositionS2CPacket.class, "field_12701", "D");
-            epos_yaw = tryGet(EntityPositionS2CPacket.class, "field_12707", "B");
-            epos_pitch = tryGet(EntityPositionS2CPacket.class, "field_12706", "B");
-            epos_onground = tryGet(EntityPositionS2CPacket.class, "field_12704", "Z");
-            evol_id = tryGet(EntityVelocityUpdateS2CPacket.class, "field_12564", "I");
-            evol_x = tryGet(EntityVelocityUpdateS2CPacket.class, "field_12563", "I");
-            evol_y = tryGet(EntityVelocityUpdateS2CPacket.class, "field_12562", "I");
-            evol_z = tryGet(EntityVelocityUpdateS2CPacket.class, "field_12561", "I");
+            epos_id = tryGet(ClientboundTeleportEntityPacket.class, "field_12705", "I");
+            epos_x = tryGet(ClientboundTeleportEntityPacket.class, "field_12703", "D");
+            epos_y = tryGet(ClientboundTeleportEntityPacket.class, "field_12702", "D");
+            epos_z = tryGet(ClientboundTeleportEntityPacket.class, "field_12701", "D");
+            epos_yaw = tryGet(ClientboundTeleportEntityPacket.class, "field_12707", "B");
+            epos_pitch = tryGet(ClientboundTeleportEntityPacket.class, "field_12706", "B");
+            epos_onground = tryGet(ClientboundTeleportEntityPacket.class, "field_12704", "Z");
+            evol_id = tryGet(ClientboundSetEntityMotionPacket.class, "field_12564", "I");
+            evol_x = tryGet(ClientboundSetEntityMotionPacket.class, "field_12563", "I");
+            evol_y = tryGet(ClientboundSetEntityMotionPacket.class, "field_12562", "I");
+            evol_z = tryGet(ClientboundSetEntityMotionPacket.class, "field_12561", "I");
 
 //            var test = createEntityPositionPacketUnsafe(123, 0.1, 0.2, 0.3, (byte)12, (byte)23, false);
 //            assert test.getId() == 123;
@@ -108,9 +108,9 @@ public class UnsafeEntityUtil {
     }
 
 
-    static EntityPositionS2CPacket createEntityPositionPacketUnsafe(
+    static ClientboundTeleportEntityPacket createEntityPositionPacketUnsafe(
             int id, double x, double y, double z, byte yaw, byte pitch, boolean onGround) throws InstantiationException, IllegalAccessException {
-        var packet = (EntityPositionS2CPacket)UNSAFE.allocateInstance(EntityPositionS2CPacket.class);
+        var packet = (ClientboundTeleportEntityPacket)UNSAFE.allocateInstance(ClientboundTeleportEntityPacket.class);
         EPOS_ID.set(packet, id);
         EPOS_X.set(packet, x);
         EPOS_Y.set(packet, y);
@@ -122,8 +122,8 @@ public class UnsafeEntityUtil {
         return packet;
     }
 
-    static EntityVelocityUpdateS2CPacket createEntityVelocityUpdateUnsafe(int id, int x, int y, int z) throws InstantiationException, IllegalAccessException {
-        var packet = (EntityVelocityUpdateS2CPacket)UNSAFE.allocateInstance(EntityVelocityUpdateS2CPacket.class);
+    static ClientboundSetEntityMotionPacket createEntityVelocityUpdateUnsafe(int id, int x, int y, int z) throws InstantiationException, IllegalAccessException {
+        var packet = (ClientboundSetEntityMotionPacket)UNSAFE.allocateInstance(ClientboundSetEntityMotionPacket.class);
 
         EVOL_ID.set(packet, id);
         EVOL_X.set(packet, x);

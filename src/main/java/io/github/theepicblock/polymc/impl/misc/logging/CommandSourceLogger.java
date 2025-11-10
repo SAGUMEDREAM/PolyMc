@@ -1,33 +1,33 @@
 package io.github.theepicblock.polymc.impl.misc.logging;
 
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
 
 /**
  * Sends logs to a {@link CommandSourceLogger}
  */
 public class CommandSourceLogger implements SimpleLogger {
-    protected final ServerCommandSource commandSource;
+    protected final CommandSourceStack commandSource;
     protected final boolean sendToOps;
 
-    public CommandSourceLogger(ServerCommandSource commandSource, boolean sendToOps) {
+    public CommandSourceLogger(CommandSourceStack commandSource, boolean sendToOps) {
         this.commandSource = commandSource;
         this.sendToOps = sendToOps;
     }
 
     @Override
     public void error(String string) {
-        commandSource.sendFeedback(() -> Text.literal(string).formatted(Formatting.RED), sendToOps);
+        commandSource.sendSuccess(() -> Component.literal(string).withStyle(ChatFormatting.RED), sendToOps);
     }
 
     @Override
     public void warn(String string) {
-        commandSource.sendFeedback(() -> Text.literal(string).formatted(Formatting.YELLOW), sendToOps);
+        commandSource.sendSuccess(() -> Component.literal(string).withStyle(ChatFormatting.YELLOW), sendToOps);
     }
 
     @Override
     public void info(String string) {
-        commandSource.sendFeedback(() -> Text.literal(string), sendToOps);
+        commandSource.sendSuccess(() -> Component.literal(string), sendToOps);
     }
 }

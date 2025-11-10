@@ -1,13 +1,17 @@
 package io.github.theepicblock.polymc.common;
 
-import net.minecraft.block.*;
-import net.minecraft.item.*;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.WorldView;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.*;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.text.html.BlockView;
 import java.util.HashMap;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -16,23 +20,23 @@ public enum BlockPlacementBehaviour {
     /**
      * Block always places a full-block
      */
-    FULL_BLOCK(i -> normalBlockItem(i) && allShapes(i, Block::isShapeFullCube) && getPlaceAtClass(i) == AbstractBlock.class && hasNormalCanReplace(i)),
+    FULL_BLOCK(i -> normalBlockItem(i) && allShapes(i, Block::isShapeFullBlock) && getPlaceAtClass(i) == BlockBehaviour.class && hasNormalCanReplace(i)),
     /**
      * Block always places an empty block
      */
-    EMPTY_BLOCK(i -> (normalBlockItem(i) || i.getClass() == TallBlockItem.class) && allShapes(i, VoxelShape::isEmpty) && getPlaceAtClass(i) == AbstractBlock.class && hasNormalCanReplace(i)),
+    EMPTY_BLOCK(i -> (normalBlockItem(i) || i.getClass() == DoubleHighBlockItem.class) && allShapes(i, VoxelShape::isEmpty) && getPlaceAtClass(i) == BlockBehaviour.class && hasNormalCanReplace(i)),
     /**
      * Placeable on farmland
      */
-    CROP(i -> (normalBlockItem(i) || i.getClass() == TallBlockItem.class) && allShapes(i, VoxelShape::isEmpty) && getPlaceAtClass(i) == CropBlock.class && getPlantOnTopClass(i) == CropBlock.class && hasNormalCanReplace(i)),
+    CROP(i -> (normalBlockItem(i) || i.getClass() == DoubleHighBlockItem.class) && allShapes(i, VoxelShape::isEmpty) && getPlaceAtClass(i) == CropBlock.class && getPlantOnTopClass(i) == CropBlock.class && hasNormalCanReplace(i)),
     /**
      * Placeable on farmland and dirt
      */
-    PLANT(i -> normalBlockItem(i) && allShapes(i, VoxelShape::isEmpty) && getPlaceAtClass(i) == PlantBlock.class && getPlantOnTopClass(i) == PlantBlock.class && hasNormalCanReplace(i)),
-    DOOR(i -> i.getClass() == TallBlockItem.class && getBehaviourClass(i) == DoorBlock.class && getPlaceAtClass(i) == DoorBlock.class && getCollisionClass(i) == DoorBlock.class && hasNormalCanReplace(i)),
-    TRAP_DOOR(i -> normalBlockItem(i) && getBehaviourClass(i) == TrapdoorBlock.class && getPlaceAtClass(i) == AbstractBlock.class && getCollisionClass(i) == TrapdoorBlock.class && hasNormalCanReplace(i)),
-    SLAB(i -> normalBlockItem(i) && getBehaviourClass(i) == SlabBlock.class && getPlaceAtClass(i) == AbstractBlock.class && getCollisionClass(i) == SlabBlock.class && getCanReplaceClass(i) == SlabBlock.class),
-    STAIR(i -> normalBlockItem(i) && getBehaviourClass(i) == StairsBlock.class && getPlaceAtClass(i) == AbstractBlock.class && getCollisionClass(i) == StairsBlock.class && hasNormalCanReplace(i));
+    PLANT(i -> normalBlockItem(i) && allShapes(i, VoxelShape::isEmpty) && getPlaceAtClass(i) == VegetationBlock.class && getPlantOnTopClass(i) == VegetationBlock.class && hasNormalCanReplace(i)),
+    DOOR(i -> i.getClass() == DoubleHighBlockItem.class && getBehaviourClass(i) == DoorBlock.class && getPlaceAtClass(i) == DoorBlock.class && getCollisionClass(i) == DoorBlock.class && hasNormalCanReplace(i)),
+    TRAP_DOOR(i -> normalBlockItem(i) && getBehaviourClass(i) == TrapDoorBlock.class && getPlaceAtClass(i) == BlockBehaviour.class && getCollisionClass(i) == TrapDoorBlock.class && hasNormalCanReplace(i)),
+    SLAB(i -> normalBlockItem(i) && getBehaviourClass(i) == SlabBlock.class && getPlaceAtClass(i) == BlockBehaviour.class && getCollisionClass(i) == SlabBlock.class && getCanReplaceClass(i) == SlabBlock.class),
+    STAIR(i -> normalBlockItem(i) && getBehaviourClass(i) == StairBlock.class && getPlaceAtClass(i) == BlockBehaviour.class && getCollisionClass(i) == StairBlock.class && hasNormalCanReplace(i));
 
     final Predicate<BlockItem> match;
 
@@ -53,9 +57,9 @@ public enum BlockPlacementBehaviour {
     private static boolean allShapes(BlockItem i, Predicate<VoxelShape> predicate) {
         // We assume that the block only places states of itself
         var blocks = new HashMap<Block, Item>();
-        i.appendBlocks(blocks, i);
+        i.registerBlocks(blocks, i);
         Stream<BlockState> states = blocks.keySet().stream().flatMap(
-                block -> block.getStateManager().getStates().stream()
+                block -> block.getStateDefinition().getPossibleStates().stream()
         );
 
         return states.allMatch(state -> {
@@ -69,15 +73,15 @@ public enum BlockPlacementBehaviour {
 
     private static boolean normalBlockItem(BlockItem item) {
         var itemClass = item.getClass();
-        return itemClass == BlockItem.class || itemClass == VerticallyAttachableBlockItem.class;
+        return itemClass == BlockItem.class || itemClass == StandingAndWallBlockItem.class;
     }
 
     private static boolean hasNormalCanReplace(BlockItem item) {
-        return getCanReplaceClass(item) == AbstractBlock.class || getCanReplaceClass(item) == AbstractPlantBlock.class;
+        return getCanReplaceClass(item) == BlockBehaviour.class || getCanReplaceClass(item) == GrowingPlantBodyBlock.class;
     }
 
     private static Class<?> getCanReplaceClass(BlockItem item) {
-        return getDefiner(item, "canReplace", BlockState.class, ItemPlacementContext.class);
+        return getDefiner(item, "canReplace", BlockState.class, BlockPlaceContext.class);
     }
 
     private static Class<?> getPlantOnTopClass(BlockItem item) {
@@ -85,11 +89,11 @@ public enum BlockPlacementBehaviour {
     }
 
     private static Class<?> getPlaceAtClass(BlockItem item) {
-        return getDefiner(item, "canPlaceAt", BlockState.class, WorldView.class, BlockPos.class);
+        return getDefiner(item, "canPlaceAt", BlockState.class, LevelReader.class, BlockPos.class);
     }
 
     private static Class<?> getBehaviourClass(BlockItem item) {
-        return getDefiner(item, "getPlacementState", ItemPlacementContext.class);
+        return getDefiner(item, "getPlacementState", BlockPlaceContext.class);
     }
 
     private static Class<?> getDefiner(BlockItem item, String methodName, Class<?>... parameters) {
@@ -107,9 +111,9 @@ public enum BlockPlacementBehaviour {
         var block = item.getBlock();
         var blockClass = block.getClass();
         try {
-            var method = blockClass.getMethod("getCollisionShape", BlockState.class, BlockView.class, BlockPos.class, ShapeContext.class);
-            if (method.getDeclaringClass() == AbstractBlock.class) {
-                return blockClass.getMethod("getOutlineShape", BlockState.class, BlockView.class, BlockPos.class, ShapeContext.class).getDeclaringClass();
+            var method = blockClass.getMethod("getCollisionShape", BlockState.class, BlockView.class, BlockPos.class, CollisionContext.class);
+            if (method.getDeclaringClass() == BlockBehaviour.class) {
+                return blockClass.getMethod("getOutlineShape", BlockState.class, BlockView.class, BlockPos.class, CollisionContext.class).getDeclaringClass();
             } else {
                 return method.getDeclaringClass();
             }

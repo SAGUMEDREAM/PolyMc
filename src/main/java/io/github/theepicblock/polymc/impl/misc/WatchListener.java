@@ -1,11 +1,11 @@
 package io.github.theepicblock.polymc.impl.misc;
 
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 
 public interface WatchListener {
-    void polymc$addPlayer(ServerPlayerEntity playerEntity);
+    void polymc$addPlayer(ServerPlayer playerEntity);
 
-    void polymc$removePlayer(ServerPlayerEntity playerEntity);
+    void polymc$removePlayer(ServerPlayer playerEntity);
 
     void polymc$removeAllPlayers();
 }

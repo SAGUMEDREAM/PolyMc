@@ -18,25 +18,24 @@
 package io.github.theepicblock.polymc.impl.poly.gui;
 
 import io.github.theepicblock.polymc.api.gui.GuiPoly;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.screen.slot.Slot;
-import net.minecraft.server.network.ServerPlayerEntity;
-
 import java.util.List;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public class NaiveStackListingChestPoly implements GuiPoly {
     @Override
-    public ScreenHandler replaceScreenHandler(ScreenHandler base, ServerPlayerEntity player, int syncId) {
-        return new NaiveStackListingScreenHandler(ScreenHandlerType.GENERIC_9X3, 9, 3, syncId, player.getInventory(), base);
+    public AbstractContainerMenu replaceScreenHandler(AbstractContainerMenu base, ServerPlayer player, int syncId) {
+        return new NaiveStackListingScreenHandler(MenuType.GENERIC_9x3, 9, 3, syncId, player.getInventory(), base);
     }
 
-    public static class NaiveStackListingScreenHandler extends ScreenHandler {
-        protected final ScreenHandler base;
+    public static class NaiveStackListingScreenHandler extends AbstractContainerMenu {
+        protected final AbstractContainerMenu base;
         /**
          * Total amount of slots in this screen. Without the player inventory
          */
@@ -46,7 +45,7 @@ public class NaiveStackListingChestPoly implements GuiPoly {
          */
         protected final int fakedSlots;
 
-        protected NaiveStackListingScreenHandler(ScreenHandlerType<?> type, int width, int height, int syncId, PlayerInventory playerInventory, ScreenHandler base) {
+        protected NaiveStackListingScreenHandler(MenuType<?> type, int width, int height, int syncId, Inventory playerInventory, AbstractContainerMenu base) {
             super(type, syncId);
             this.base = base;
             this.totalSlots = width*height;
@@ -84,16 +83,16 @@ public class NaiveStackListingChestPoly implements GuiPoly {
         }
 
         @Override
-        public boolean canUse(PlayerEntity player) {
-            return base.canUse(player);
+        public boolean stillValid(Player player) {
+            return base.stillValid(player);
         }
 
         @Override
-        public ItemStack quickMove(PlayerEntity player, int index) {
+        public ItemStack quickMoveStack(Player player, int index) {
             if (index > totalSlots) {
                 index -= fakedSlots;
             }
-            return base.quickMove(player, index);
+            return base.quickMoveStack(player, index);
         }
     }
 }
