@@ -95,6 +95,6 @@ public class Main implements ModInitializer {
 
     @SuppressWarnings("unchecked")
     private static <T extends Comparable<T>> String nameValue(Property<T> property, Comparable<?> value) {
-        return property.name((T)value);
+        return property.getName((T)value);
     }
 }
