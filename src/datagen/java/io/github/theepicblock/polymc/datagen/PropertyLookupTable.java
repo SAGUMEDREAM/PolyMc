@@ -52,7 +52,7 @@ public class PropertyLookupTable {
     }
 
     private static <T extends Comparable<T>> String getValueName(Property<T> property, Object value) {
-        return property.name((T)value);
+        return property.getName((T)value);
     }
 
     public int getPropertyId(Property<?> property) {

@@ -4,3 +4,4 @@ accessible class net/minecraft/server/level/ChunkMap$TrackedEntity
 accessible method net/minecraft/world/level/chunk/PalettedContainer$Data storage ()Lnet/minecraft/util/BitStorage;
 extendable method net/minecraft/world/entity/Entity setRemoved (Lnet/minecraft/world/entity/Entity$RemovalReason;)V
 accessible field net/minecraft/world/item/component/CustomData tag Lnet/minecraft/nbt/CompoundTag;
+accessible field net/minecraft/world/level/block/state/properties/Property name Ljava/lang/String;

@@ -3,10 +3,10 @@ package io.github.theepicblock.polymc.datagen;
 import io.github.theepicblock.polymc.common.BlockItemType;
 import io.github.theepicblock.polymc.common.BlockItemTypeExamples;
 import io.netty.buffer.Unpooled;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.item.BlockItem;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.item.BlockItem;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -24,8 +24,8 @@ public class PopulateBlockItemInfo {
 
     public static void doStuff(File outputDir) throws IOException {
         var list = new BlockItemTypeExamples();
-        for (var item : Registries.ITEM) {
-            if (item.getComponents().contains(DataComponentTypes.FOOD)) continue;
+        for (var item : BuiltInRegistries.ITEM) {
+            if (item.components().has(DataComponents.FOOD)) continue;
 
             if (item instanceof BlockItem blockItem) {
                 var type = BlockItemType.of(blockItem);
@@ -36,7 +36,7 @@ public class PopulateBlockItemInfo {
 
         list.audit(LOGGER);
 
-        PacketByteBuf outBuf = new PacketByteBuf(Unpooled.buffer());
+        FriendlyByteBuf outBuf = new FriendlyByteBuf(Unpooled.buffer());
         list.write(outBuf);
         File outputFile = new File(outputDir, "block-item-examples");
         LOGGER.info("block-item-examples: "+outputFile.toPath().toAbsolutePath());
@@ -44,7 +44,7 @@ public class PopulateBlockItemInfo {
         write(outputFile.toPath(), outBuf, StandardOpenOption.CREATE);
     }
 
-    public static void write(Path path, PacketByteBuf buf, OpenOption... options) throws IOException {
+    public static void write(Path path, FriendlyByteBuf buf, OpenOption... options) throws IOException {
         Objects.requireNonNull(buf);
 
         try (OutputStream out = Files.newOutputStream(path, options)) {
